@@ -7,16 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0574F1868E662A3F7103F4FE /* FoundationPreviewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DE9C9E1CA7D91DBA035352 /* FoundationPreviewApp.swift */; };
 		07D407F1A1FBC022448A8C1A /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = DB375122F3C31483E99A3FA3 /* Networking */; };
 		1C8C2CABF8D3E1C63E52433A /* DebugTools in Frameworks */ = {isa = PBXBuildFile; productRef = 6AA1F857002C7B41D955C42B /* DebugTools */; };
 		32D4D423102BAC27B4C9B4EA /* AppShell in Frameworks */ = {isa = PBXBuildFile; productRef = 9786C7B8CD35D9DE4660E0E2 /* AppShell */; };
 		3FD919C63CFD1F233EE1CBC8 /* Navigation in Frameworks */ = {isa = PBXBuildFile; productRef = F08838F5894D7C6F62FFEB09 /* Navigation */; };
 		4E0B9E7568A89E2F0375D7EA /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = F4A93BDA25946F179AB3CF5A /* DesignSystem */; };
+		5D4C0FD5EC8AF8AB5843FBB2 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 26C629E5E91A9028E71D6386 /* DesignSystem */; };
 		6561F9B4A138DA526D18B512 /* Observability in Frameworks */ = {isa = PBXBuildFile; productRef = E9E1B9E7E3A4F7C42D3EDE6F /* Observability */; };
 		70AF8E59FF7D71BB026AB415 /* Permissions in Frameworks */ = {isa = PBXBuildFile; productRef = AAECD4DEB500AFC06165BA42 /* Permissions */; };
+		7172CEE21CB9A1DD8746279B /* FoundationHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E718FC3D8A8D10E51280F2BC /* FoundationHostApp.swift */; };
+		818F14C19A2C0EA548BDE67D /* Navigation in Frameworks */ = {isa = PBXBuildFile; productRef = 7627DDBC4724E573B8AA2090 /* Navigation */; };
 		B17734AF5DD189234A03A4CB /* FoundationHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E718FC3D8A8D10E51280F2BC /* FoundationHostApp.swift */; };
+		C22DB9E1CA215990DD6B7DC9 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678D395D312C600F55D6C7A4 /* RootView.swift */; };
+		CA9ADECE6F42A5ADAED08B9D /* Permissions in Frameworks */ = {isa = PBXBuildFile; productRef = CB148FEC1ED98743AB099B6A /* Permissions */; };
+		CD8974535876D41958C36843 /* AppShell in Frameworks */ = {isa = PBXBuildFile; productRef = 3A5134430BC8883F083398EF /* AppShell */; };
 		D44FAFF9975F199F7022680E /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 75EB7B0568AE7F47BE6C0C6C /* Storage */; };
 		E3606A9354517E95D43C5FDE /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678D395D312C600F55D6C7A4 /* RootView.swift */; };
+		EA277FBC7045E225B2FE04BA /* FoundationPreviewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DE9C9E1CA7D91DBA035352 /* FoundationPreviewApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,9 +34,11 @@
 		76B78321E0B154703235B2C0 /* Navigation */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Navigation; path = Packages/Navigation; sourceTree = SOURCE_ROOT; };
 		88601F8D4E56273A5385D5DF /* Permissions */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Permissions; path = Packages/Permissions; sourceTree = SOURCE_ROOT; };
 		982F38C7CB86D59A72FE4AB0 /* MobileFoundation.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MobileFoundation.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		98DE9C9E1CA7D91DBA035352 /* FoundationPreviewApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationPreviewApp.swift; sourceTree = "<group>"; };
 		B5588654255FB25AA0E15DE2 /* Storage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Storage; path = Packages/Storage; sourceTree = SOURCE_ROOT; };
 		C00F6C81326EB0458678C925 /* Observability */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Observability; path = Packages/Observability; sourceTree = SOURCE_ROOT; };
 		C3C7D2982083864CACC0E829 /* Networking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Networking; path = Packages/Networking; sourceTree = SOURCE_ROOT; };
+		C58A00F314773BAC8A78515A /* FoundationPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoundationPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3206BD4458B04E6F3F2CBF5 /* AppShell */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AppShell; path = Packages/AppShell; sourceTree = SOURCE_ROOT; };
 		D48284232FA1702036C17749 /* DebugTools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DebugTools; path = Packages/DebugTools; sourceTree = SOURCE_ROOT; };
 		E718FC3D8A8D10E51280F2BC /* FoundationHostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationHostApp.swift; sourceTree = "<group>"; };
@@ -48,6 +58,17 @@
 				70AF8E59FF7D71BB026AB415 /* Permissions in Frameworks */,
 				6561F9B4A138DA526D18B512 /* Observability in Frameworks */,
 				1C8C2CABF8D3E1C63E52433A /* DebugTools in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E268A43D63E1958781D8BF9D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CD8974535876D41958C36843 /* AppShell in Frameworks */,
+				5D4C0FD5EC8AF8AB5843FBB2 /* DesignSystem in Frameworks */,
+				818F14C19A2C0EA548BDE67D /* Navigation in Frameworks */,
+				CA9ADECE6F42A5ADAED08B9D /* Permissions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +103,7 @@
 		69B6EB32307FAAA923E9532E /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				C58A00F314773BAC8A78515A /* FoundationPreview.app */,
 				982F38C7CB86D59A72FE4AB0 /* MobileFoundation.app */,
 			);
 			name = Products;
@@ -100,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				E718FC3D8A8D10E51280F2BC /* FoundationHostApp.swift */,
+				98DE9C9E1CA7D91DBA035352 /* FoundationPreviewApp.swift */,
 				678D395D312C600F55D6C7A4 /* RootView.swift */,
 			);
 			path = App;
@@ -132,6 +155,28 @@
 			);
 			productName = MobileFoundation;
 			productReference = 982F38C7CB86D59A72FE4AB0 /* MobileFoundation.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9325B6DDB838C203908FFC50 /* FoundationPreview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6974580D2D3D4EED27A0C78C /* Build configuration list for PBXNativeTarget "FoundationPreview" */;
+			buildPhases = (
+				7E4CE5959AC90D4CA59B815A /* Sources */,
+				E268A43D63E1958781D8BF9D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FoundationPreview;
+			packageProductDependencies = (
+				3A5134430BC8883F083398EF /* AppShell */,
+				26C629E5E91A9028E71D6386 /* DesignSystem */,
+				7627DDBC4724E573B8AA2090 /* Navigation */,
+				CB148FEC1ED98743AB099B6A /* Permissions */,
+			);
+			productName = FoundationPreview;
+			productReference = C58A00F314773BAC8A78515A /* FoundationPreview.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -169,17 +214,29 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				9325B6DDB838C203908FFC50 /* FoundationPreview */,
 				06405B511D4C5CF5F088C122 /* MobileFoundation */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7E4CE5959AC90D4CA59B815A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7172CEE21CB9A1DD8746279B /* FoundationHostApp.swift in Sources */,
+				0574F1868E662A3F7103F4FE /* FoundationPreviewApp.swift in Sources */,
+				C22DB9E1CA215990DD6B7DC9 /* RootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8CE5E7D2FCAE271FDC7245C9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				B17734AF5DD189234A03A4CB /* FoundationHostApp.swift in Sources */,
+				EA277FBC7045E225B2FE04BA /* FoundationPreviewApp.swift in Sources */,
 				E3606A9354517E95D43C5FDE /* RootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -267,7 +324,6 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -295,6 +351,48 @@
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		97ABE16ECDEB979C2E352230 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Foundation Preview";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.mobilefoundation.preview;
+				PRODUCT_NAME = FoundationPreview;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		D1BC8C716C9A54F4B9FBC84A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Foundation Preview";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.mobilefoundation.preview;
+				PRODUCT_NAME = FoundationPreview;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -347,7 +445,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -357,6 +454,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		6974580D2D3D4EED27A0C78C /* Build configuration list for PBXNativeTarget "FoundationPreview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				97ABE16ECDEB979C2E352230 /* Debug */,
+				D1BC8C716C9A54F4B9FBC84A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		78E574B287D64FAE65CCCFD9 /* Build configuration list for PBXProject "MobileFoundation" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -413,6 +519,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		26C629E5E91A9028E71D6386 /* DesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DesignSystem;
+		};
+		3A5134430BC8883F083398EF /* AppShell */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppShell;
+		};
 		6AA1F857002C7B41D955C42B /* DebugTools */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DebugTools;
@@ -421,11 +535,19 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = Storage;
 		};
+		7627DDBC4724E573B8AA2090 /* Navigation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Navigation;
+		};
 		9786C7B8CD35D9DE4660E0E2 /* AppShell */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AppShell;
 		};
 		AAECD4DEB500AFC06165BA42 /* Permissions */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Permissions;
+		};
+		CB148FEC1ED98743AB099B6A /* Permissions */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Permissions;
 		};
