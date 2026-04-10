@@ -1,0 +1,24 @@
+name: Foundation Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify public scaffold exists
+        run: |
+          test -f README.md
+          test -f apps/android/README.md
+          test -f apps/ios/README.md
+          test -f packages/design-tokens/tokens.json
+          test -f packages/docs/adr/0001-public-private-boundary.md
+      - name: Guard against business folders in public repo
+        run: |
+          ! find . -type d \( -name checkout -o -name orders -o -name payment -o -name catalog \)
+

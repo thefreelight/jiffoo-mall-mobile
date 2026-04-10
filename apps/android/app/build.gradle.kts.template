@@ -1,0 +1,11 @@
+/*
+Host app template for the open-source Android shell.
+
+This should stay intentionally small:
+- application id
+- startup wiring
+- debug menu entrypoint
+- demo surface
+
+Keep business modules out of this public repository.
+*/

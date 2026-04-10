@@ -1,33 +1,26 @@
-# Expo
-.expo/
-dist/
-web-build/
-
-# Native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# Debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
 # macOS
 .DS_Store
-*.pem
 
-# Local env files
-.env*.local
+# Editors
+.idea/
+.vscode/
 
-# TypeScript
-*.tsbuildinfo
+# Android
+**/.gradle/
+**/build/
+local.properties
+captures/
 
-# Testing
+# iOS / Xcode / SwiftPM
+DerivedData/
+xcuserdata/
+*.xcuserstate
+.build/
+Package.resolved
+
+# Tooling
+node_modules/
+dist/
+tmp/
 coverage/
+.artifacts/

@@ -1,0 +1,86 @@
+name: MobileFoundation
+
+options:
+  deploymentTarget:
+    iOS: 17.0
+  minimumXcodeGenVersion: 2.38.0
+  createIntermediateGroups: true
+
+packages:
+  AppShell:
+    path: Packages/AppShell
+  DesignSystem:
+    path: Packages/DesignSystem
+  Navigation:
+    path: Packages/Navigation
+  Networking:
+    path: Packages/Networking
+  Storage:
+    path: Packages/Storage
+  Permissions:
+    path: Packages/Permissions
+  Observability:
+    path: Packages/Observability
+  DebugTools:
+    path: Packages/DebugTools
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Config/Dev.xcconfig
+  Release: Config/Prod.xcconfig
+
+targets:
+  MobileFoundation:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.mobilefoundation
+        SWIFT_VERSION: 6.0
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_CFBundleDisplayName: Mobile Foundation
+        INFOPLIST_KEY_LSRequiresIPhoneOS: true
+    dependencies:
+      - package: AppShell
+      - package: DesignSystem
+      - package: Navigation
+      - package: Networking
+      - package: Storage
+      - package: Permissions
+      - package: Observability
+      - package: DebugTools
+    scheme:
+      testTargets: []
+
+  FoundationPreview:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.mobilefoundation.preview
+        PRODUCT_NAME: FoundationPreview
+        SWIFT_VERSION: 6.0
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_CFBundleDisplayName: Foundation Preview
+    dependencies:
+      - package: AppShell
+      - package: DesignSystem
+      - package: Navigation
+      - package: Permissions
+    scheme:
+      testTargets: []
