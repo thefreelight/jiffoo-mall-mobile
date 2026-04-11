@@ -73,8 +73,8 @@ The first tagged baseline should favor a small but reliable surface.
 
 Planned first baseline:
 
-- version: `0.1.0`
-- tag: `v0.1.0`
+- version: `0.0.1`
+- tag: `v0.0.1`
 
 Recommended baseline scope:
 
@@ -111,15 +111,15 @@ Later, if the platform grows enough, independent version streams can be reconsid
 
 ```kotlin
 dependencies {
-  implementation("io.github.thefreelight.mobilefoundation:design-system-android:1.0.0")
-  implementation("io.github.thefreelight.mobilefoundation:navigation-android:1.0.0")
+  implementation("io.github.thefreelight.mobilefoundation:design-system-android:0.0.1")
+  implementation("io.github.thefreelight.mobilefoundation:navigation-android:0.0.1")
 }
 ```
 
 ### iOS
 
 ```swift
-.package(url: "https://github.com/thefreelight/jiffoo-mall-mobile.git", from: "1.0.0")
+.package(url: "https://github.com/thefreelight/jiffoo-mall-mobile.git", from: "0.0.1")
 ```
 
 Then depend on:

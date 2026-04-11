@@ -7,7 +7,7 @@ Use this area for release automation that is safe to keep public, such as change
 - Release model: [packages/docs/architecture/open-source-release-model.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/open-source-release-model.md)
 - Distribution blueprint: [packages/docs/architecture/distribution-blueprint.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/distribution-blueprint.md)
 - Release manifest: [tools/release/release-manifest.json](/Users/jordan/Projects/jiffoo-mall-mobile/tools/release/release-manifest.json)
-- Baseline release plan: [packages/docs/release/0.1.0-baseline-release-plan.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/0.1.0-baseline-release-plan.md)
+- Baseline release plan: [packages/docs/release/0.0.1-baseline-release-plan.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/0.0.1-baseline-release-plan.md)
 - Release readiness: [tools/release/check-release-readiness.sh](/Users/jordan/Projects/jiffoo-mall-mobile/tools/release/check-release-readiness.sh)
 
 ## Intent

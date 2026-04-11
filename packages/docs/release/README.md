@@ -4,7 +4,7 @@ This directory holds release-specific planning artifacts for the foundation.
 
 ## Current Documents
 
-- Baseline release plan: [packages/docs/release/0.1.0-baseline-release-plan.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/0.1.0-baseline-release-plan.md)
+- Baseline release plan: [packages/docs/release/0.0.1-baseline-release-plan.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/0.0.1-baseline-release-plan.md)
 - Release notes template: [packages/docs/release/release-notes-template.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/release-notes-template.md)
 - Migration guide template: [packages/docs/release/migration-guide-template.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/migration-guide-template.md)
 
