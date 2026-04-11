@@ -69,7 +69,7 @@ Exit criteria:
 
 - [x] Finish Android runnable host instead of template-only Gradle files
 - [x] Finish iOS runnable host and local package layout
-- [ ] Add Android and iOS demo gallery surfaces
+- [x] Add Android and iOS demo gallery surfaces
 - [x] Add downstream integration guide
 - [ ] Tag the first foundation baseline release
 

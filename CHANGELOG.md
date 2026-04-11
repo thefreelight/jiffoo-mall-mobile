@@ -16,6 +16,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added CI structure checks in [foundation-checks.yml](/Users/jordan/Projects/jiffoo-mall-mobile/.github/workflows/foundation-checks.yml).
 - Added a runnable Android Compose host app under [apps/android/app](/Users/jordan/Projects/jiffoo-mall-mobile/apps/android/app).
 - Added a macOS preview host to the iOS workspace so the foundation UI can be previewed locally outside the simulator.
+- Added clickable foundation demo galleries on Android and iOS so the public repo explains itself through runnable capability screens.
 
 ### Changed
 
