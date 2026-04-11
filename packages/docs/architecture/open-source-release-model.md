@@ -15,6 +15,11 @@ Instead, the supported public surface should be:
 - documented stability tiers
 - release notes and migration guides
 
+The concrete release-unit mapping lives in:
+
+- [packages/docs/architecture/distribution-blueprint.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/distribution-blueprint.md)
+- [tools/release/release-manifest.json](/Users/jordan/Projects/jiffoo-mall-mobile/tools/release/release-manifest.json)
+
 ## Consumer Views
 
 ### Maintainer view

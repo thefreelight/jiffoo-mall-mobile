@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "releaseStrategy": {
+    "tagging": "single-repo-semver",
+    "androidRegistry": "maven-central-target",
+    "iosRegistry": "swift-package-tags",
+    "notes": "Use one repository tag per release until independent version streams become necessary."
+  },
+  "releaseUnits": [
+    {
+      "capability": "design-tokens",
+      "tier": "stable",
+      "androidArtifact": null,
+      "swiftProduct": null,
+      "distribution": "source-of-truth"
+    },
+    {
+      "capability": "design-system",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:design-system-android",
+      "swiftProduct": "DesignSystem",
+      "distribution": "android-artifact,swift-package"
+    },
+    {
+      "capability": "navigation",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:navigation-android",
+      "swiftProduct": "Navigation",
+      "distribution": "android-artifact,swift-package"
+    },
+    {
+      "capability": "permissions",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:permissions-android",
+      "swiftProduct": "Permissions",
+      "distribution": "android-artifact,swift-package"
+    },
+    {
+      "capability": "storage",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:storage-android",
+      "swiftProduct": "Storage",
+      "distribution": "android-artifact,swift-package"
+    },
+    {
+      "capability": "observability",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:observability-android",
+      "swiftProduct": "Observability",
+      "distribution": "android-artifact,swift-package"
+    },
+    {
+      "capability": "debug-tools",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:debug-tools-android",
+      "swiftProduct": "DebugTools",
+      "distribution": "android-artifact,swift-package"
+    },
+    {
+      "capability": "networking",
+      "tier": "experimental",
+      "androidArtifact": "io.github.thefreelight.mobilefoundation:networking-android",
+      "swiftProduct": "Networking",
+      "distribution": "android-artifact,swift-package"
+    }
+  ],
+  "excludedFromDistribution": [
+    "apps/android/app",
+    "apps/ios/App",
+    "demo-gallery",
+    "preview-only code"
+  ]
+}

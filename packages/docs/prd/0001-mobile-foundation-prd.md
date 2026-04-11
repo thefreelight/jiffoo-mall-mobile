@@ -38,6 +38,7 @@ It should make new apps feel like:
 - Capture architecture decisions in docs so they are not re-litigated every sprint.
 - Enable downstream apps such as `bokmoo-app` to consume the foundation through a repeatable sync model.
 - Make the foundation safe for open-source consumers to adopt and upgrade over time.
+- Make release-unit names and adoption paths explicit enough that consumers do not need to learn the repository internals first.
 
 ## In Scope
 

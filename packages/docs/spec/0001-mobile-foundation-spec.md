@@ -130,6 +130,8 @@ The intended public consumer contract is:
 - semantic versions
 - changelogs and migration guides
 
+The repository must keep a documented distribution blueprint and release manifest so consumers can see exact release-unit names without inferring them from source folders.
+
 ## Stability Contract
 
 Public modules must be classified into one of these tiers:

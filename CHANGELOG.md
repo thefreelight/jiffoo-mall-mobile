@@ -19,6 +19,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added clickable foundation demo galleries on Android and iOS so the public repo explains itself through runnable capability screens.
 - Added release-model documentation for stability tiers, semantic versioning, distribution strategy, and compatibility validation.
 - Added a public API catalog and stability matrix so consumers can see which capabilities are stable, experimental, or internal.
+- Added a concrete distribution blueprint and release manifest for Android artifacts and Swift Package products.
 
 ### Changed
 
