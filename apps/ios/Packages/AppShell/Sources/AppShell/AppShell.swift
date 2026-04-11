@@ -127,6 +127,8 @@ public enum StorefrontPreviewData {
     public static let basicFlows = [
         "home",
         "catalog",
+        "categories",
+        "search",
         "product-detail",
         "cart",
         "checkout",

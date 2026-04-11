@@ -94,6 +94,8 @@ object StorefrontPreviewData {
     val basicFlows = listOf(
         "home",
         "catalog",
+        "categories",
+        "search",
         "product-detail",
         "cart",
         "checkout",

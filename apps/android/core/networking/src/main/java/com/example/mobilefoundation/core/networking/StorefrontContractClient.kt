@@ -2,6 +2,7 @@ package com.example.mobilefoundation.core.networking
 
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import java.net.URL
 import org.json.JSONObject
 
@@ -23,6 +24,14 @@ data class StorefrontProductListItem(
     val price: Double,
     val stock: Int,
     val images: List<String>,
+    val categorySlug: String?,
+)
+
+data class StorefrontCategory(
+    val id: String,
+    val name: String,
+    val slug: String,
+    val productCount: Int?,
 )
 
 data class StorefrontProductVariant(
@@ -52,6 +61,7 @@ object StorefrontCatalogPreviewData {
             price = 299.0,
             stock = 18,
             images = emptyList(),
+            categorySlug = "devices",
         ),
         StorefrontProductListItem(
             id = "preview-curator-bundle",
@@ -60,6 +70,7 @@ object StorefrontCatalogPreviewData {
             price = 89.0,
             stock = 9,
             images = emptyList(),
+            categorySlug = "digital",
         ),
         StorefrontProductListItem(
             id = "preview-stellar-seat",
@@ -68,7 +79,14 @@ object StorefrontCatalogPreviewData {
             price = 49.0,
             stock = 120,
             images = emptyList(),
+            categorySlug = "software",
         ),
+    )
+
+    val categories = listOf(
+        StorefrontCategory(id = "preview-devices", name = "Devices", slug = "devices", productCount = 1),
+        StorefrontCategory(id = "preview-digital", name = "Digital", slug = "digital", productCount = 1),
+        StorefrontCategory(id = "preview-software", name = "Software", slug = "software", productCount = 1),
     )
 
     val details = listOf(
@@ -132,6 +150,19 @@ object StorefrontCatalogPreviewData {
     )
 
     fun detailFor(productId: String): StorefrontProductDetail? = details.firstOrNull { it.id == productId }
+
+    fun filterProducts(categorySlug: String?, searchQuery: String): List<StorefrontProductListItem> {
+        val normalizedQuery = searchQuery.trim().lowercase()
+
+        return products.filter { product ->
+            val categoryMatches = categorySlug.isNullOrBlank() || categorySlug == "all" || product.categorySlug == categorySlug
+            val searchMatches = normalizedQuery.isBlank() ||
+                product.name.lowercase().contains(normalizedQuery) ||
+                product.description.orEmpty().lowercase().contains(normalizedQuery)
+
+            categoryMatches && searchMatches
+        }
+    }
 }
 
 object StorefrontContractClient {
@@ -166,9 +197,21 @@ object StorefrontContractClient {
         )
     }
 
-    fun fetchProducts(baseUrl: String, limit: Int = 6): List<StorefrontProductListItem> {
+    fun fetchProducts(
+        baseUrl: String,
+        limit: Int = 6,
+        categorySlug: String? = null,
+        searchQuery: String = "",
+    ): List<StorefrontProductListItem> {
         val normalizedBaseUrl = baseUrl.trimEnd('/')
-        val envelope = requestEnvelope("$normalizedBaseUrl/api/products?page=1&limit=$limit")
+        val queryParts = mutableListOf("page=1", "limit=$limit")
+        if (!categorySlug.isNullOrBlank() && categorySlug != "all") {
+            queryParts += "category=${encode(categorySlug)}"
+        }
+        if (searchQuery.isNotBlank()) {
+            queryParts += "search=${encode(searchQuery.trim())}"
+        }
+        val envelope = requestEnvelope("$normalizedBaseUrl/api/products?${queryParts.joinToString("&")}")
         val data = requireDataObject(envelope, "/api/products")
         val items = data.optJSONArray("items")
             ?: throw IOException("Contract probe returned no items for /api/products")
@@ -184,6 +227,29 @@ object StorefrontContractClient {
                         price = item.optDouble("price"),
                         stock = item.optInt("stock"),
                         images = jsonArrayStrings(item.optJSONArray("images")),
+                        categorySlug = null,
+                    ),
+                )
+            }
+        }
+    }
+
+    fun fetchCategories(baseUrl: String, limit: Int = 8): List<StorefrontCategory> {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val envelope = requestEnvelope("$normalizedBaseUrl/api/products/categories?page=1&limit=$limit")
+        val data = requireDataObject(envelope, "/api/products/categories")
+        val items = data.optJSONArray("items")
+            ?: throw IOException("Contract probe returned no items for /api/products/categories")
+
+        return buildList {
+            for (index in 0 until items.length()) {
+                val item = items.optJSONObject(index) ?: continue
+                add(
+                    StorefrontCategory(
+                        id = item.optString("id"),
+                        name = item.optString("name"),
+                        slug = item.optString("slug"),
+                        productCount = item.optInt("productCount").takeIf { it > 0 },
                     ),
                 )
             }
@@ -271,4 +337,6 @@ object StorefrontContractClient {
             }
         }
     }
+
+    private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
 }

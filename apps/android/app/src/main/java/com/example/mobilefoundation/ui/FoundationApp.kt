@@ -60,6 +60,7 @@ import com.example.mobilefoundation.core.navigation.NavigationRoute
 import com.example.mobilefoundation.core.networking.NetworkingPreview
 import com.example.mobilefoundation.core.networking.RequestDescriptor
 import com.example.mobilefoundation.core.networking.StorefrontCatalogPreviewData
+import com.example.mobilefoundation.core.networking.StorefrontCategory
 import com.example.mobilefoundation.core.networking.StorefrontContractClient
 import com.example.mobilefoundation.core.networking.StorefrontContractSnapshot
 import com.example.mobilefoundation.core.networking.StorefrontProductDetail
@@ -87,6 +88,12 @@ fun FoundationApp() {
     var liveProducts by remember { mutableStateOf<List<StorefrontProductListItem>>(emptyList()) }
     var liveProductsError by remember { mutableStateOf<String?>(null) }
     var isLoadingProducts by remember { mutableStateOf(false) }
+    var liveCategories by remember { mutableStateOf<List<StorefrontCategory>>(emptyList()) }
+    var liveCategoriesError by remember { mutableStateOf<String?>(null) }
+    var isLoadingCategories by remember { mutableStateOf(false) }
+    var selectedCategorySlug by remember { mutableStateOf("all") }
+    var searchQuery by remember { mutableStateOf("") }
+    var appliedSearchQuery by remember { mutableStateOf("") }
     var selectedProductId by remember { mutableStateOf(StorefrontCatalogPreviewData.products.first().id) }
     var liveProductDetail by remember { mutableStateOf<StorefrontProductDetail?>(null) }
     var liveProductDetailError by remember { mutableStateOf<String?>(null) }
@@ -118,6 +125,31 @@ fun FoundationApp() {
     }
 
     LaunchedEffect(liveSnapshot?.baseUrl) {
+        liveCategories = emptyList()
+        liveCategoriesError = null
+        liveProducts = emptyList()
+        liveProductsError = null
+        liveProductDetail = null
+        liveProductDetailError = null
+
+        val snapshot = liveSnapshot ?: return@LaunchedEffect
+        isLoadingCategories = true
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                StorefrontContractClient.fetchCategories(snapshot.baseUrl)
+            }
+        }.onSuccess { categories ->
+            liveCategories = categories
+        }.onFailure { error ->
+            liveCategoriesError = error.message ?: "Unable to load categories from core."
+            selectedCategorySlug = "all"
+        }
+
+        isLoadingCategories = false
+    }
+
+    LaunchedEffect(liveSnapshot?.baseUrl, selectedCategorySlug, appliedSearchQuery) {
         liveProducts = emptyList()
         liveProductsError = null
         liveProductDetail = null
@@ -128,7 +160,11 @@ fun FoundationApp() {
 
         runCatching {
             withContext(Dispatchers.IO) {
-                StorefrontContractClient.fetchProducts(snapshot.baseUrl)
+                StorefrontContractClient.fetchProducts(
+                    baseUrl = snapshot.baseUrl,
+                    categorySlug = selectedCategorySlug,
+                    searchQuery = appliedSearchQuery,
+                )
             }
         }.onSuccess { products ->
             liveProducts = products
@@ -139,6 +175,18 @@ fun FoundationApp() {
         }
 
         isLoadingProducts = false
+    }
+
+    LaunchedEffect(selectedCategorySlug, appliedSearchQuery, liveProducts, liveSnapshot?.baseUrl) {
+        val effectiveProducts = if (liveProducts.isNotEmpty()) {
+            liveProducts
+        } else {
+            StorefrontCatalogPreviewData.filterProducts(selectedCategorySlug, appliedSearchQuery)
+        }
+
+        if (effectiveProducts.none { it.id == selectedProductId }) {
+            selectedProductId = effectiveProducts.firstOrNull()?.id ?: ""
+        }
     }
 
     LaunchedEffect(selectedProductId, liveSnapshot?.baseUrl, liveProducts.isNotEmpty()) {
@@ -188,6 +236,19 @@ fun FoundationApp() {
                         liveProducts = liveProducts,
                         liveProductsError = liveProductsError,
                         isLoadingProducts = isLoadingProducts,
+                        liveCategories = liveCategories,
+                        liveCategoriesError = liveCategoriesError,
+                        isLoadingCategories = isLoadingCategories,
+                        selectedCategorySlug = selectedCategorySlug,
+                        onCategorySelected = { selectedCategorySlug = it },
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        onApplySearch = { appliedSearchQuery = searchQuery.trim() },
+                        onClearSearch = {
+                            searchQuery = ""
+                            appliedSearchQuery = ""
+                        },
+                        appliedSearchQuery = appliedSearchQuery,
                         selectedProductId = selectedProductId,
                         onProductSelected = { selectedProductId = it },
                         liveProductDetail = liveProductDetail,
@@ -254,6 +315,16 @@ private fun FoundationHome(
     liveProducts: List<StorefrontProductListItem>,
     liveProductsError: String?,
     isLoadingProducts: Boolean,
+    liveCategories: List<StorefrontCategory>,
+    liveCategoriesError: String?,
+    isLoadingCategories: Boolean,
+    selectedCategorySlug: String,
+    onCategorySelected: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onApplySearch: () -> Unit,
+    onClearSearch: () -> Unit,
+    appliedSearchQuery: String,
     selectedProductId: String,
     onProductSelected: (String) -> Unit,
     liveProductDetail: StorefrontProductDetail?,
@@ -302,6 +373,16 @@ private fun FoundationHome(
                 liveProducts = liveProducts,
                 liveProductsError = liveProductsError,
                 isLoadingProducts = isLoadingProducts,
+                liveCategories = liveCategories,
+                liveCategoriesError = liveCategoriesError,
+                isLoadingCategories = isLoadingCategories,
+                selectedCategorySlug = selectedCategorySlug,
+                onCategorySelected = onCategorySelected,
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange,
+                onApplySearch = onApplySearch,
+                onClearSearch = onClearSearch,
+                appliedSearchQuery = appliedSearchQuery,
                 selectedProductId = selectedProductId,
                 onProductSelected = onProductSelected,
                 liveProductDetail = liveProductDetail,
@@ -346,6 +427,16 @@ private fun StorefrontBasicVersionCard(
     liveProducts: List<StorefrontProductListItem>,
     liveProductsError: String?,
     isLoadingProducts: Boolean,
+    liveCategories: List<StorefrontCategory>,
+    liveCategoriesError: String?,
+    isLoadingCategories: Boolean,
+    selectedCategorySlug: String,
+    onCategorySelected: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onApplySearch: () -> Unit,
+    onClearSearch: () -> Unit,
+    appliedSearchQuery: String,
     selectedProductId: String,
     onProductSelected: (String) -> Unit,
     liveProductDetail: StorefrontProductDetail?,
@@ -497,6 +588,16 @@ private fun StorefrontBasicVersionCard(
                 liveProducts = liveProducts,
                 liveProductsError = liveProductsError,
                 isLoadingProducts = isLoadingProducts,
+                liveCategories = liveCategories,
+                liveCategoriesError = liveCategoriesError,
+                isLoadingCategories = isLoadingCategories,
+                selectedCategorySlug = selectedCategorySlug,
+                onCategorySelected = onCategorySelected,
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange,
+                onApplySearch = onApplySearch,
+                onClearSearch = onClearSearch,
+                appliedSearchQuery = appliedSearchQuery,
                 selectedProductId = selectedProductId,
                 onProductSelected = onProductSelected,
                 liveProductDetail = liveProductDetail,
@@ -512,13 +613,28 @@ private fun CatalogReferenceSection(
     liveProducts: List<StorefrontProductListItem>,
     liveProductsError: String?,
     isLoadingProducts: Boolean,
+    liveCategories: List<StorefrontCategory>,
+    liveCategoriesError: String?,
+    isLoadingCategories: Boolean,
+    selectedCategorySlug: String,
+    onCategorySelected: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onApplySearch: () -> Unit,
+    onClearSearch: () -> Unit,
+    appliedSearchQuery: String,
     selectedProductId: String,
     onProductSelected: (String) -> Unit,
     liveProductDetail: StorefrontProductDetail?,
     liveProductDetailError: String?,
     isLoadingProductDetail: Boolean,
 ) {
-    val effectiveProducts = if (liveProducts.isNotEmpty()) liveProducts else StorefrontCatalogPreviewData.products
+    val effectiveProducts = if (liveProducts.isNotEmpty()) {
+        liveProducts
+    } else {
+        StorefrontCatalogPreviewData.filterProducts(selectedCategorySlug, appliedSearchQuery)
+    }
+    val effectiveCategories = if (liveCategories.isNotEmpty()) liveCategories else StorefrontCatalogPreviewData.categories
     val previewDetail = StorefrontCatalogPreviewData.detailFor(selectedProductId)
     val isUsingLiveCatalog = liveProducts.isNotEmpty()
     val effectiveDetail = if (isUsingLiveCatalog) liveProductDetail else previewDetail
@@ -533,10 +649,66 @@ private fun CatalogReferenceSection(
         labels = listOf(
             "catalog source: ${if (isUsingLiveCatalog) "live core" else "preview fallback"}",
             "items: ${effectiveProducts.size}",
+            "category: $selectedCategorySlug",
+            "search: ${if (appliedSearchQuery.isBlank()) "none" else appliedSearchQuery}",
             "selected: $selectedProductId",
         ),
         dark = false,
     )
+
+    Text(
+        text = "Category discovery",
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+    )
+
+    CategoryPillRow(
+        categories = effectiveCategories,
+        selectedCategorySlug = selectedCategorySlug,
+        onCategorySelected = onCategorySelected,
+    )
+
+    if (!isUsingLiveCatalog && liveCategoriesError != null) {
+        StatusNotice(
+            title = "Category fallback active",
+            message = liveCategoriesError,
+            accent = Color(0xFFF6E6C6),
+        )
+    }
+
+    if (isLoadingCategories) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(
+                text = "Loading categories from /api/products/categories...",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+        }
+    }
+
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        label = { Text("Search products") },
+        supportingText = {
+            Text("Use /api/products with search filters in the public reference host.")
+        },
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = onApplySearch) {
+            Text("Apply search")
+        }
+        Button(onClick = onClearSearch) {
+            Text("Clear")
+        }
+    }
 
     if (isLoadingProducts) {
         Row(
@@ -606,6 +778,31 @@ private fun CatalogReferenceSection(
 }
 
 @Composable
+private fun CategoryPillRow(
+    categories: List<StorefrontCategory>,
+    selectedCategorySlug: String,
+    onCategorySelected: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Pill(
+            label = "all",
+            dark = false,
+            selected = selectedCategorySlug == "all",
+            onClick = { onCategorySelected("all") },
+        )
+
+        categories.forEach { category ->
+            Pill(
+                label = category.name,
+                dark = false,
+                selected = selectedCategorySlug == category.slug,
+                onClick = { onCategorySelected(category.slug) },
+            )
+        }
+    }
+}
+
+@Composable
 private fun ProductListCard(
     product: StorefrontProductListItem,
     selected: Boolean,
@@ -640,6 +837,7 @@ private fun ProductListCard(
                 labels = listOf(
                     "price: ${formatPrice(product.price)}",
                     "stock: ${product.stock}",
+                    product.categorySlug?.let { "category: $it" } ?: "category: unknown",
                 ),
                 dark = false,
             )

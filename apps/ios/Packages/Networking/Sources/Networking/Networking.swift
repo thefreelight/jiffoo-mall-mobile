@@ -50,14 +50,30 @@ public struct StorefrontProductListItem: Sendable, Hashable {
     public let price: Double
     public let stock: Int
     public let images: [String]
+    public let categorySlug: String?
 
-    public init(id: String, name: String, description: String?, price: Double, stock: Int, images: [String]) {
+    public init(id: String, name: String, description: String?, price: Double, stock: Int, images: [String], categorySlug: String?) {
         self.id = id
         self.name = name
         self.description = description
         self.price = price
         self.stock = stock
         self.images = images
+        self.categorySlug = categorySlug
+    }
+}
+
+public struct StorefrontCategory: Sendable, Hashable {
+    public let id: String
+    public let name: String
+    public let slug: String
+    public let productCount: Int?
+
+    public init(id: String, name: String, slug: String, productCount: Int?) {
+        self.id = id
+        self.name = name
+        self.slug = slug
+        self.productCount = productCount
     }
 }
 
@@ -114,7 +130,8 @@ public enum StorefrontCatalogPreviewData {
             description: "Baseline storefront sample product used to demonstrate the public client contract.",
             price: 299,
             stock: 18,
-            images: []
+            images: [],
+            categorySlug: "devices"
         ),
         StorefrontProductListItem(
             id: "preview-curator-bundle",
@@ -122,7 +139,8 @@ public enum StorefrontCatalogPreviewData {
             description: "Editorial-style sample item for theme-pack adapter previews.",
             price: 89,
             stock: 9,
-            images: []
+            images: [],
+            categorySlug: "digital"
         ),
         StorefrontProductListItem(
             id: "preview-stellar-seat",
@@ -130,8 +148,15 @@ public enum StorefrontCatalogPreviewData {
             description: "SaaS-flavored sample SKU for the first-wave storefront gallery.",
             price: 49,
             stock: 120,
-            images: []
+            images: [],
+            categorySlug: "software"
         )
+    ]
+
+    public static let categories: [StorefrontCategory] = [
+        StorefrontCategory(id: "preview-devices", name: "Devices", slug: "devices", productCount: 1),
+        StorefrontCategory(id: "preview-digital", name: "Digital", slug: "digital", productCount: 1),
+        StorefrontCategory(id: "preview-software", name: "Software", slug: "software", productCount: 1)
     ]
 
     public static let details: [StorefrontProductDetail] = [
@@ -177,6 +202,19 @@ public enum StorefrontCatalogPreviewData {
     public static func detail(for productId: String) -> StorefrontProductDetail? {
         details.first(where: { $0.id == productId })
     }
+
+    public static func filterProducts(categorySlug: String?, searchQuery: String) -> [StorefrontProductListItem] {
+        let normalizedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        return products.filter { product in
+            let categoryMatches = categorySlug == nil || categorySlug == "" || categorySlug == "all" || product.categorySlug == categorySlug
+            let searchMatches = normalizedQuery.isEmpty ||
+                product.name.lowercased().contains(normalizedQuery) ||
+                (product.description ?? "").lowercased().contains(normalizedQuery)
+
+            return categoryMatches && searchMatches
+        }
+    }
 }
 
 public enum StorefrontContractClient {
@@ -207,9 +245,15 @@ public enum StorefrontContractClient {
         )
     }
 
-    public static func fetchProducts(baseUrl: String, limit: Int = 6) async throws -> [StorefrontProductListItem] {
+    public static func fetchProducts(
+        baseUrl: String,
+        limit: Int = 6,
+        categorySlug: String? = nil,
+        searchQuery: String = ""
+    ) async throws -> [StorefrontProductListItem] {
         let normalizedBaseUrl = normalize(baseUrl)
-        let envelope: ProductListEnvelope = try await request(path: "/api/products?page=1&limit=\(limit)", baseUrl: normalizedBaseUrl)
+        let path = buildProductsPath(limit: limit, categorySlug: categorySlug, searchQuery: searchQuery)
+        let envelope: ProductListEnvelope = try await request(path: path, baseUrl: normalizedBaseUrl)
 
         guard envelope.success, let data = envelope.data else {
             throw StorefrontContractError.invalidEnvelope(path: "/api/products")
@@ -222,7 +266,29 @@ public enum StorefrontContractClient {
                 description: $0.description,
                 price: $0.price,
                 stock: $0.stock,
-                images: $0.images
+                images: $0.images,
+                categorySlug: nil
+            )
+        }
+    }
+
+    public static func fetchCategories(baseUrl: String, limit: Int = 8) async throws -> [StorefrontCategory] {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let envelope: ProductCategoryEnvelope = try await request(
+            path: "/api/products/categories?page=1&limit=\(limit)",
+            baseUrl: normalizedBaseUrl
+        )
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/products/categories")
+        }
+
+        return data.items.map {
+            StorefrontCategory(
+                id: $0.id,
+                name: $0.name,
+                slug: $0.slug,
+                productCount: $0.productCount
             )
         }
     }
@@ -281,6 +347,27 @@ public enum StorefrontContractClient {
         return normalized
     }
 
+    private static func buildProductsPath(limit: Int, categorySlug: String?, searchQuery: String) -> String {
+        var components = URLComponents()
+        components.path = "/api/products"
+        var queryItems = [
+            URLQueryItem(name: "page", value: "1"),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+
+        if let categorySlug, !categorySlug.isEmpty, categorySlug != "all" {
+            queryItems.append(URLQueryItem(name: "category", value: categorySlug))
+        }
+
+        let normalizedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !normalizedQuery.isEmpty {
+            queryItems.append(URLQueryItem(name: "search", value: normalizedQuery))
+        }
+
+        components.queryItems = queryItems
+        return components.string ?? "/api/products?page=1&limit=\(limit)"
+    }
+
     private static func perform(request: URLRequest) async throws -> (Data, URLResponse) {
         try await withCheckedThrowingContinuation { continuation in
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
@@ -307,6 +394,8 @@ public enum NetworkingPreview {
         RequestDescriptor(path: "/api/store/context", method: "GET", requiresAuth: false),
         RequestDescriptor(path: "/api/themes/active", method: "GET", requiresAuth: false),
         RequestDescriptor(path: "/api/products?page=1&limit=20", method: "GET", requiresAuth: false),
+        RequestDescriptor(path: "/api/products/categories?page=1&limit=20", method: "GET", requiresAuth: false),
+        RequestDescriptor(path: "/api/products?search=watch&page=1&limit=10", method: "GET", requiresAuth: false),
         RequestDescriptor(path: "/api/products/:id", method: "GET", requiresAuth: false),
         RequestDescriptor(path: "/api/cart", method: "GET", requiresAuth: true),
         RequestDescriptor(path: "/api/orders", method: "GET", requiresAuth: true)
@@ -352,6 +441,22 @@ private struct ProductListPayloadItem: Decodable {
     let price: Double
     let stock: Int
     let images: [String]
+}
+
+private struct ProductCategoryEnvelope: Decodable {
+    let success: Bool
+    let data: ProductCategoryPayload?
+}
+
+private struct ProductCategoryPayload: Decodable {
+    let items: [ProductCategoryPayloadItem]
+}
+
+private struct ProductCategoryPayloadItem: Decodable {
+    let id: String
+    let name: String
+    let slug: String
+    let productCount: Int?
 }
 
 private struct ProductDetailEnvelope: Decodable {

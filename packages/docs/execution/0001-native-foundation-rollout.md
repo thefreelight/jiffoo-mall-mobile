@@ -15,6 +15,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - Both public hosts now expose a preview-only storefront basic version that proves `builtin-default` adapter selection and explicit fallback for not-yet-supported themes.
 - Both public hosts can now probe a local core storefront runtime and surface live store/theme resolution before falling back to preview data.
 - Both public hosts now include a read-only catalog and product-detail reference slice backed by live core data when available.
+- Both public hosts now include category discovery and search on top of the same read-only catalog reference path.
 
 ## Milestones
 
@@ -94,6 +95,7 @@ Deliverables:
 - preview-only `builtin-default` storefront adapter path on Android and iOS
 - local core contract probe for `/api/store/context` and `/api/themes/active`
 - read-only `/api/products` and `/api/products/:id` reference flow
+- read-only `/api/products/categories` and search-filtered `/api/products` reference flow
 - explicit fallback UX for `planned`, `limited`, `experimental`, and `unsupported` themes
 - contract-aligned explanation of how `/api/store/context` and `/api/themes/active` feed real runtime resolution
 
@@ -116,6 +118,7 @@ Exit criteria:
 - [x] Add a basic storefront reference slice with explicit theme fallback behavior
 - [x] Add live core contract probing to the public storefront reference hosts
 - [x] Add a read-only catalog and product-detail reference slice
+- [x] Add category discovery and search to the read-only storefront reference flow
 
 ## Risks And Watchouts
 
@@ -149,3 +152,4 @@ The Linear rollout should track at least these workstreams:
 - `JIF-130`: Ship baseline storefront adapter preview and fallback
 - `JIF-131`: Wire live core storefront contract probe into public hosts
 - `JIF-132`: Add read-only catalog reference flow to public hosts
+- `JIF-133`: Add category discovery and search to public hosts

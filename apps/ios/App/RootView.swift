@@ -20,6 +20,12 @@ struct RootView: View {
     @State private var liveProducts: [StorefrontProductListItem] = []
     @State private var liveProductsError: String?
     @State private var isLoadingProducts = false
+    @State private var liveCategories: [StorefrontCategory] = []
+    @State private var liveCategoriesError: String?
+    @State private var isLoadingCategories = false
+    @State private var selectedCategorySlug = "all"
+    @State private var searchQuery = ""
+    @State private var appliedSearchQuery = ""
     @State private var selectedProductId = StorefrontCatalogPreviewData.products.first?.id ?? ""
     @State private var liveProductDetail: StorefrontProductDetail?
     @State private var liveProductDetailError: String?
@@ -71,9 +77,12 @@ struct RootView: View {
             await probeStorefront()
         }
         .task(id: liveSnapshot?.baseUrl) {
+            await loadCategories()
+        }
+        .task(id: "\(liveSnapshot?.baseUrl ?? "preview")-\(selectedCategorySlug)-\(appliedSearchQuery)") {
             await loadCatalog()
         }
-        .task(id: "\(selectedProductId)-\(liveSnapshot?.baseUrl ?? "preview")-\(liveProducts.count)") {
+        .task(id: "\(selectedProductId)-\(selectedCategorySlug)-\(appliedSearchQuery)-\(liveProducts.count)-\(liveSnapshot?.baseUrl ?? "preview")") {
             await loadProductDetail()
         }
     }
@@ -207,18 +216,54 @@ struct RootView: View {
         liveProductDetail = nil
         liveProductDetailError = nil
 
-        guard let liveSnapshot else { return }
+        guard let liveSnapshot else {
+            let previewProducts = StorefrontCatalogPreviewData.filterProducts(
+                categorySlug: selectedCategorySlug,
+                searchQuery: appliedSearchQuery
+            )
+            if !previewProducts.contains(where: { $0.id == selectedProductId }) {
+                selectedProductId = previewProducts.first?.id ?? ""
+            }
+            return
+        }
 
         isLoadingProducts = true
         do {
-            let products = try await StorefrontContractClient.fetchProducts(baseUrl: liveSnapshot.baseUrl)
+            let products = try await StorefrontContractClient.fetchProducts(
+                baseUrl: liveSnapshot.baseUrl,
+                categorySlug: selectedCategorySlug,
+                searchQuery: appliedSearchQuery
+            )
             liveProducts = products
-            selectedProductId = products.first?.id ?? (StorefrontCatalogPreviewData.products.first?.id ?? "")
+            if let firstId = products.first?.id {
+                selectedProductId = firstId
+            }
         } catch {
             liveProductsError = error.localizedDescription
-            selectedProductId = StorefrontCatalogPreviewData.products.first?.id ?? ""
         }
         isLoadingProducts = false
+
+        let effectiveProducts = liveProducts.isEmpty
+            ? StorefrontCatalogPreviewData.filterProducts(categorySlug: selectedCategorySlug, searchQuery: appliedSearchQuery)
+            : liveProducts
+        if !effectiveProducts.contains(where: { $0.id == selectedProductId }) {
+            selectedProductId = effectiveProducts.first?.id ?? ""
+        }
+    }
+
+    private func loadCategories() async {
+        liveCategories = []
+        liveCategoriesError = nil
+        guard let liveSnapshot else { return }
+
+        isLoadingCategories = true
+        do {
+            liveCategories = try await StorefrontContractClient.fetchCategories(baseUrl: liveSnapshot.baseUrl)
+        } catch {
+            liveCategoriesError = error.localizedDescription
+            selectedCategorySlug = "all"
+        }
+        isLoadingCategories = false
     }
 
     private func loadProductDetail() async {
@@ -257,7 +302,10 @@ struct RootView: View {
     }
 
     private func catalogReferenceSection() -> some View {
-        let effectiveProducts = liveProducts.isEmpty ? StorefrontCatalogPreviewData.products : liveProducts
+        let effectiveProducts = liveProducts.isEmpty
+            ? StorefrontCatalogPreviewData.filterProducts(categorySlug: selectedCategorySlug, searchQuery: appliedSearchQuery)
+            : liveProducts
+        let effectiveCategories = liveCategories.isEmpty ? StorefrontCatalogPreviewData.categories : liveCategories
         let isUsingLiveCatalog = !liveProducts.isEmpty
         let previewDetail = StorefrontCatalogPreviewData.detail(for: selectedProductId)
         let effectiveDetail = isUsingLiveCatalog ? liveProductDetail : previewDetail
@@ -269,7 +317,55 @@ struct RootView: View {
             VStack(alignment: .leading, spacing: 8) {
                 pill("catalog source: \(isUsingLiveCatalog ? "live core" : "preview fallback")", dark: false)
                 pill("items: \(effectiveProducts.count)", dark: false)
+                pill("category: \(selectedCategorySlug)", dark: false)
+                pill("search: \(appliedSearchQuery.isEmpty ? "none" : appliedSearchQuery)", dark: false)
                 pill("selected: \(selectedProductId)", dark: false)
+            }
+
+            Text("Category discovery")
+                .font(.subheadline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                categoryPill(title: "All", slug: "all")
+                ForEach(effectiveCategories, id: \.slug) { category in
+                    categoryPill(title: category.name, slug: category.slug)
+                }
+            }
+
+            if isLoadingCategories {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading categories from /api/products/categories...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if liveCategories.isEmpty, let liveCategoriesError {
+                statusCard(
+                    title: "Category fallback active",
+                    message: liveCategoriesError,
+                    accent: Color(red: 0.96, green: 0.90, blue: 0.78)
+                )
+            }
+
+            TextField("Search products", text: $searchQuery)
+                .textFieldStyle(.roundedBorder)
+
+            Text("Use /api/products with search filters in the public reference host.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Button("Apply search") {
+                    appliedSearchQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+
+                Button("Clear") {
+                    searchQuery = ""
+                    appliedSearchQuery = ""
+                }
             }
 
             if isLoadingProducts {
@@ -369,12 +465,22 @@ struct RootView: View {
             VStack(alignment: .leading, spacing: 8) {
                 pill("price: \(formatPrice(product.price))", dark: false)
                 pill("stock: \(product.stock)", dark: false)
+                pill("category: \(product.categorySlug ?? "unknown")", dark: false)
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(selected ? Color(red: 0.87, green: 0.92, blue: 0.90) : .white.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func categoryPill(title: String, slug: String) -> some View {
+        Button {
+            selectedCategorySlug = slug
+        } label: {
+            pill(title, dark: false, selected: selectedCategorySlug == slug)
+        }
+        .buttonStyle(.plain)
     }
 
     private func productDetailCard(product: StorefrontProductDetail, sourceLabel: String) -> some View {
