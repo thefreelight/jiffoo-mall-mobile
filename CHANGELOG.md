@@ -20,6 +20,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added release-model documentation for stability tiers, semantic versioning, distribution strategy, and compatibility validation.
 - Added a public API catalog and stability matrix so consumers can see which capabilities are stable, experimental, or internal.
 - Added a concrete distribution blueprint and release manifest for Android artifacts and Swift Package products.
+- Added a compatibility lab definition and smoke-check script for release readiness.
 
 ### Changed
 

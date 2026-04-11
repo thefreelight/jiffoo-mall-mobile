@@ -23,6 +23,11 @@ jobs:
       - name: Verify public API catalog
         run: |
           bash tools/ci/check-public-api-catalog.sh
+      - name: Verify release contract files
+        run: |
+          test -f packages/docs/architecture/compatibility-lab.md
+          test -f tools/release/release-manifest.json
+          test -f tools/ci/check-compatibility-lab.sh
       - name: Guard against business folders in public repo
         run: |
           ! find . -type d \( -name checkout -o -name orders -o -name payment -o -name catalog \)

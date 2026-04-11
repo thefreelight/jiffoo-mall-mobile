@@ -131,6 +131,11 @@ Before a release is considered safe:
 - sample consumer integration must build against the candidate release
 - upgrade-from-previous-version smoke checks should pass for stable modules
 
+The current minimum lab definition lives in:
+
+- [packages/docs/architecture/compatibility-lab.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/compatibility-lab.md)
+- [tools/ci/check-compatibility-lab.sh](/Users/jordan/Projects/jiffoo-mall-mobile/tools/ci/check-compatibility-lab.sh)
+
 ## Definition Of “Seamless Upgrade”
 
 This repository should optimize for predictable upgrades, not magical zero-effort upgrades.
