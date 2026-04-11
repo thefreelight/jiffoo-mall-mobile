@@ -23,6 +23,9 @@ jobs:
       - name: Verify public API catalog
         run: |
           bash tools/ci/check-public-api-catalog.sh
+      - name: Verify storefront client contract
+        run: |
+          bash tools/ci/check-storefront-client-contract.sh
       - name: Verify release contract files
         run: |
           test -f packages/docs/architecture/compatibility-lab.md

@@ -9,6 +9,8 @@ This directory contains the planning and architecture chain for the public nativ
 - Execution plan: [packages/docs/execution/0001-native-foundation-rollout.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/execution/0001-native-foundation-rollout.md)
 - Release docs: [packages/docs/release/README.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/README.md)
 - Architecture notes: [packages/docs/architecture/README.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/README.md)
+- Storefront client contract: [packages/docs/architecture/storefront-client-contract.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/storefront-client-contract.md)
+- Storefront client profile: [packages/docs/architecture/storefront-client-profile.json](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/storefront-client-profile.json)
 - Downstream guide: [packages/docs/architecture/downstream-consumption.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/downstream-consumption.md)
 - Release model: [packages/docs/architecture/open-source-release-model.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/open-source-release-model.md)
 - Distribution blueprint: [packages/docs/architecture/distribution-blueprint.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/distribution-blueprint.md)

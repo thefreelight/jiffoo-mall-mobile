@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "reference-mobile",
+  "family": "mobile",
+  "displayName": "Jiffoo Mall Mobile Foundation",
+  "sourceOfTruth": "Jiffoo",
+  "coreContractPath": "docs/theme-client-platform-contract.md",
+  "supportedThemeModes": ["embedded", "pack", "theme-app", "native-adapter"],
+  "supportedExtensions": ["app_block", "app_embed"],
+  "capabilities": [
+    "auth",
+    "catalog",
+    "cart",
+    "checkout",
+    "orders",
+    "payments",
+    "deep-link",
+    "auth-session-bridge",
+    "offline-cache",
+    "push-notifications"
+  ],
+  "commerceApiTier": "stable",
+  "themePresentationTier": "experimental",
+  "minimumCoreVersion": "0.0.1",
+  "notes": [
+    "This profile describes the mobile client contract only.",
+    "Concrete endpoint semantics and DTOs stay in the core repository."
+  ]
+}
