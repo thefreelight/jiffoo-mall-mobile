@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "tiers": ["stable", "experimental", "internal"],
+  "capabilities": [
+    {
+      "id": "app-shell",
+      "tier": "internal",
+      "targetTier": "internal",
+      "androidPath": "apps/android/app",
+      "iosPath": "apps/ios/App",
+      "distribution": "none",
+      "notes": "Public demo hosts only. Not a supported consumer API."
+    },
+    {
+      "id": "design-system",
+      "tier": "experimental",
+      "targetTier": "stable",
+      "androidPath": "apps/android/core/designsystem",
+      "iosPath": "apps/ios/Packages/DesignSystem",
+      "distribution": "android-artifact,swift-package",
+      "notes": "Candidate stable surface once token generation and component contracts are hardened."
+    },
+    {
+      "id": "navigation",
+      "tier": "experimental",
+      "targetTier": "stable",
+      "androidPath": "apps/android/core/navigation",
+      "iosPath": "apps/ios/Packages/Navigation",
+      "distribution": "android-artifact,swift-package",
+      "notes": "Only shell-level routes should become stable. Product flows stay private."
+    },
+    {
+      "id": "permissions",
+      "tier": "experimental",
+      "targetTier": "stable",
+      "androidPath": "apps/android/core/permissions",
+      "iosPath": "apps/ios/Packages/Permissions",
+      "distribution": "android-artifact,swift-package",
+      "notes": "System permission wrappers can stabilize, but feature-specific prompt timing remains private."
+    },
+    {
+      "id": "storage",
+      "tier": "experimental",
+      "targetTier": "stable",
+      "androidPath": "apps/android/core/storage",
+      "iosPath": "apps/ios/Packages/Storage",
+      "distribution": "android-artifact,swift-package",
+      "notes": "Generic adapters are reusable. Concrete keys and models remain private."
+    },
+    {
+      "id": "observability",
+      "tier": "experimental",
+      "targetTier": "stable",
+      "androidPath": "apps/android/core/observability",
+      "iosPath": "apps/ios/Packages/Observability",
+      "distribution": "android-artifact,swift-package",
+      "notes": "Contracts may stabilize. Production event names and vendor config stay private."
+    },
+    {
+      "id": "debug-tools",
+      "tier": "experimental",
+      "targetTier": "stable",
+      "androidPath": "apps/android/core/debug",
+      "iosPath": "apps/ios/Packages/DebugTools",
+      "distribution": "android-artifact,swift-package",
+      "notes": "Public diagnostics are useful, but shipping debug integrations require stronger release rules."
+    },
+    {
+      "id": "networking",
+      "tier": "experimental",
+      "targetTier": "experimental",
+      "androidPath": "apps/android/core/networking",
+      "iosPath": "apps/ios/Packages/Networking",
+      "distribution": "android-artifact,swift-package",
+      "notes": "Keep this abstract until transport, auth hooks, and mock adapters are mature."
+    },
+    {
+      "id": "design-tokens",
+      "tier": "stable",
+      "targetTier": "stable",
+      "androidPath": "packages/design-tokens",
+      "iosPath": "packages/design-tokens",
+      "distribution": "source-of-truth",
+      "notes": "This is the most stable cross-platform contract today."
+    },
+    {
+      "id": "demo-gallery",
+      "tier": "internal",
+      "targetTier": "internal",
+      "androidPath": "apps/android/app/src/main/java/com/example/mobilefoundation/ui/FoundationApp.kt",
+      "iosPath": "apps/ios/App/RootView.swift",
+      "distribution": "none",
+      "notes": "Demo pages explain the foundation but are not a stable API."
+    }
+  ]
+}

@@ -18,7 +18,11 @@ jobs:
           test -f apps/ios/README.md
           test -f packages/design-tokens/tokens.json
           test -f packages/docs/adr/0001-public-private-boundary.md
+          test -f packages/docs/architecture/public-api-catalog.json
+          test -f packages/docs/architecture/module-stability-matrix.md
+      - name: Verify public API catalog
+        run: |
+          bash tools/ci/check-public-api-catalog.sh
       - name: Guard against business folders in public repo
         run: |
           ! find . -type d \( -name checkout -o -name orders -o -name payment -o -name catalog \)
-

@@ -85,7 +85,7 @@ Exit criteria:
 - [x] Add Android and iOS demo gallery surfaces
 - [x] Add downstream integration guide
 - [ ] Tag the first foundation baseline release
-- [ ] Define stability tiers for public modules
+- [x] Define stability tiers for public modules
 - [ ] Add compatibility lab checks for downstream consumers
 - [ ] Define Android artifact and iOS package distribution plan
 

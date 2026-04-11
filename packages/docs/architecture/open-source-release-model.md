@@ -90,6 +90,11 @@ Examples that should not be treated as stable public API:
 - repository folder names beyond the documented package layout
 - preview-only code
 
+The current source-of-truth catalog lives in:
+
+- [packages/docs/architecture/public-api-catalog.json](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/public-api-catalog.json)
+- [packages/docs/architecture/module-stability-matrix.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/module-stability-matrix.md)
+
 ## Versioning Policy
 
 Use semantic versioning:
