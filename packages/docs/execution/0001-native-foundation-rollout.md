@@ -9,7 +9,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - The repository has been reset away from the previous Expo / React Native product implementation.
 - A public native repo shape now exists for Android and iOS.
 - iOS has a generated Xcode host project and package-level smoke coverage.
-- Android currently has documented templates, but not yet a pinned runnable host build.
+- Android now has a pinned runnable host build with a minimal public Compose demo surface.
 
 ## Milestones
 
@@ -67,7 +67,7 @@ Exit criteria:
 
 ## Delivery Checklist
 
-- [ ] Finish Android runnable host instead of template-only Gradle files
+- [x] Finish Android runnable host instead of template-only Gradle files
 - [x] Finish iOS runnable host and local package layout
 - [ ] Add Android and iOS demo gallery surfaces
 - [x] Add downstream integration guide

@@ -68,6 +68,7 @@ Keep these out:
 The Android side is organized as an app shell plus `core/*` capability modules.
 
 - [apps/android/README.md](/Users/jordan/Projects/jiffoo-mall-mobile/apps/android/README.md)
+- Local output: [app-debug.apk](/Users/jordan/Projects/jiffoo-mall-mobile/apps/android/app/build/outputs/apk/debug/app-debug.apk)
 
 ## iOS
 
@@ -88,6 +89,6 @@ The iOS side uses a lightweight app host folder plus local Swift Packages for re
 
 ## Next Steps
 
-1. Pin Android toolchain versions and replace the `*.template` Gradle files with runnable build files.
-2. Add a demo gallery screen on both platforms before introducing any real product code.
+1. Expand the Android and iOS demo surfaces into a more complete public gallery.
+2. Lift more capability code out of the shell and into real reusable modules.
 3. Start versioning and tagging the foundation before the first downstream private app consumes it.

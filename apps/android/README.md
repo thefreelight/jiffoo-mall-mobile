@@ -21,10 +21,14 @@ This directory holds the public Android-native foundation scaffold.
 
 ## Build Files
 
-The Gradle files are checked in as templates:
+The Android host now ships with a runnable Gradle setup for the public demo shell.
 
-- `settings.gradle.kts.template`
-- `build.gradle.kts.template`
-- `app/build.gradle.kts.template`
+## Local Run
 
-This keeps the public scaffold version-agnostic until you choose exact Android Gradle Plugin, Kotlin, and Compose versions for your host app.
+```bash
+cd apps/android
+./gradlew assembleDebug
+./gradlew installDebug
+```
+
+If you do not have a connected device or emulator, the project can still be verified with `assembleDebug`.
