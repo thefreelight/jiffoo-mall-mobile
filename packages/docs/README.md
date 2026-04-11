@@ -7,6 +7,7 @@ This directory contains the planning and architecture chain for the public nativ
 - Spec: [packages/docs/spec/0001-mobile-foundation-spec.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/spec/0001-mobile-foundation-spec.md)
 - PRD: [packages/docs/prd/0001-mobile-foundation-prd.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/prd/0001-mobile-foundation-prd.md)
 - Execution plan: [packages/docs/execution/0001-native-foundation-rollout.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/execution/0001-native-foundation-rollout.md)
+- Release docs: [packages/docs/release/README.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/release/README.md)
 - Architecture notes: [packages/docs/architecture/README.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/README.md)
 - Downstream guide: [packages/docs/architecture/downstream-consumption.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/downstream-consumption.md)
 - Release model: [packages/docs/architecture/open-source-release-model.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/architecture/open-source-release-model.md)

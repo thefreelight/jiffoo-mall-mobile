@@ -71,6 +71,11 @@ Not for distribution:
 
 The first tagged baseline should favor a small but reliable surface.
 
+Planned first baseline:
+
+- version: `0.1.0`
+- tag: `v0.1.0`
+
 Recommended baseline scope:
 
 - `design-tokens`

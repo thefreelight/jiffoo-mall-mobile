@@ -6,6 +6,26 @@
     "iosRegistry": "swift-package-tags",
     "notes": "Use one repository tag per release until independent version streams become necessary."
   },
+  "firstBaseline": {
+    "version": "0.1.0",
+    "tag": "v0.1.0",
+    "status": "planned",
+    "notes": "The first baseline is intentionally conservative. It establishes a documented adoption point before broader stable publication.",
+    "includedCapabilities": [
+      "design-tokens",
+      "design-system",
+      "navigation",
+      "permissions",
+      "storage"
+    ],
+    "heldBackCapabilities": [
+      "networking",
+      "observability",
+      "debug-tools",
+      "app-shell",
+      "demo-gallery"
+    ]
+  },
   "releaseUnits": [
     {
       "capability": "design-tokens",

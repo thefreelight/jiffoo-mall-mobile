@@ -11,6 +11,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - iOS has a generated Xcode host project and package-level smoke coverage.
 - Android now has a pinned runnable host build with a minimal public Compose demo surface.
 - Android `core/*` capabilities now exist as real Gradle library modules, and iOS gallery screens read from package-level contracts instead of host-only placeholder data.
+- The first planned baseline release is now documented as `v0.1.0`, and release-readiness checks pass locally.
 
 ## Milestones
 
@@ -89,6 +90,7 @@ Exit criteria:
 - [x] Finish iOS runnable host and local package layout
 - [x] Add Android and iOS demo gallery surfaces
 - [x] Add downstream integration guide
+- [x] Prepare the first foundation baseline release
 - [ ] Tag the first foundation baseline release
 - [x] Define stability tiers for public modules
 - [x] Add compatibility lab checks for downstream consumers

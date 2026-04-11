@@ -22,6 +22,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added a concrete distribution blueprint and release manifest for Android artifacts and Swift Package products.
 - Added a compatibility lab definition and smoke-check script for release readiness.
 - Added real Android `core/*` library modules for runtime, navigation, design system, networking, storage, permissions, observability, and debug capabilities.
+- Added a concrete `v0.1.0` baseline release plan, release templates, and release-readiness script.
 
 ### Changed
 
