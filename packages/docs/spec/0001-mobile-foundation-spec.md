@@ -15,6 +15,7 @@ It exists to provide a reusable Android and iOS foundation that can be consumed 
 - Provide a public Android-native and iOS-native application shell.
 - Standardize repository shape for future private consumer apps.
 - Centralize public design tokens, public assets, templates, and architecture guidance.
+- Define a release and upgrade model suitable for open-source consumers.
 - Define stable capability areas shared across native apps:
   - app shell
   - navigation
@@ -118,9 +119,40 @@ The initial recommended sync model is:
 - short term: `git subtree`
 - long term: package and artifact distribution for Android and iOS modules
 
+## Distribution Contract
+
+This repository is the maintainer source monorepo, not the long-term consumer contract.
+
+The intended public consumer contract is:
+
+- Android artifacts for stable modules
+- Swift Package products for stable iOS modules
+- semantic versions
+- changelogs and migration guides
+
+## Stability Contract
+
+Public modules must be classified into one of these tiers:
+
+- `stable`
+- `experimental`
+- `internal`
+
+Only `stable` modules carry a compatibility promise across minor and patch releases.
+
+## Compatibility Verification
+
+Before a release is considered ready:
+
+- Android host builds must pass
+- iOS host builds must pass
+- sample consumer integration checks must pass for stable modules
+- migration notes must exist for downstream-impacting changes
+
 ## Success Criteria
 
 - A new private native app can start from this repository shape without redefining the base architecture.
 - Public and private boundaries remain enforceable in code review.
 - Shared platform updates can be propagated into product apps without manual cherry-picking across many files.
 - The repo remains useful even without product-specific code.
+- Consumers can upgrade stable modules through a documented, versioned path instead of depending on internal repository layout.

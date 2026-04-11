@@ -67,3 +67,16 @@ As the foundation stabilizes:
 - publish Android foundation modules as versioned artifacts
 - expose iOS foundation packages as stable Swift Package products
 - reduce subtree usage where stronger package boundaries exist
+
+## Consumer Safety Rules
+
+Downstream consumers should not assume every folder in the monorepo is a stable API.
+
+They should adopt only the documented stable modules and follow release notes when upgrading.
+
+The long-term contract is:
+
+- semantic versions
+- stability tiers
+- migration guidance
+- compatibility-tested releases

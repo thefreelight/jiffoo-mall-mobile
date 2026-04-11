@@ -29,6 +29,7 @@ It should make new apps feel like:
 - Demoable: public code should still be runnable and inspectable.
 - Upstreamable: downstream private apps must be able to inherit changes in a controlled way.
 - Symmetric: Android and iOS should expose the same capability map even with different implementations.
+- Versioned: consumers should upgrade through predictable versions, not by reverse-engineering repo internals.
 
 ## Target Outcomes
 
@@ -36,6 +37,7 @@ It should make new apps feel like:
 - Standardize public module boundaries across Android and iOS.
 - Capture architecture decisions in docs so they are not re-litigated every sprint.
 - Enable downstream apps such as `bokmoo-app` to consume the foundation through a repeatable sync model.
+- Make the foundation safe for open-source consumers to adopt and upgrade over time.
 
 ## In Scope
 
@@ -45,6 +47,7 @@ It should make new apps feel like:
 - debug and demo surfaces
 - architecture docs, ADRs, specs, and release notes
 - templates and CI guardrails
+- release tiers, versioning policy, and compatibility validation
 
 ## Out of Scope
 
@@ -59,6 +62,7 @@ It should make new apps feel like:
 - As a platform maintainer, I want a public native base that I can improve without risking product leakage.
 - As a product app owner, I want to create a private app repo that inherits a stable mobile foundation.
 - As a new contributor, I want docs that explain what belongs in the public repo and what does not.
+- As a consumer of the open-source foundation, I want to know which modules are stable and how to upgrade them safely.
 
 ## Success Metrics
 
@@ -66,6 +70,7 @@ It should make new apps feel like:
 - Platform updates can be adopted by a downstream app with a documented process.
 - No business feature folders or production contracts land in the public repo.
 - The repository remains buildable or previewable on at least one local host surface.
+- Stable modules can be versioned and upgraded with explicit migration guidance when required.
 
 ## Risks
 
@@ -78,3 +83,4 @@ It should make new apps feel like:
 - Keep demos and debug tools inside the foundation.
 - Freeze repo boundaries in ADRs and CI checks.
 - Use a defined upstream sync model instead of copy-paste.
+- Keep the stable public API intentionally small and validate consumer compatibility before releases.

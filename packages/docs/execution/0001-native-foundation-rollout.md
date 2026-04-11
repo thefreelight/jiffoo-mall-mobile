@@ -65,6 +65,19 @@ Exit criteria:
 
 - downstream update path is documented and testable
 
+### Phase 5: Open-source release model
+
+Deliverables:
+
+- define `stable / experimental / internal` module tiers
+- document semantic versioning and deprecation policy
+- define Android artifact and iOS package distribution targets
+- add compatibility lab checks for consumer upgrade confidence
+
+Exit criteria:
+
+- the foundation can be treated as a versioned platform product, not just a source repo
+
 ## Delivery Checklist
 
 - [x] Finish Android runnable host instead of template-only Gradle files
@@ -72,6 +85,9 @@ Exit criteria:
 - [x] Add Android and iOS demo gallery surfaces
 - [x] Add downstream integration guide
 - [ ] Tag the first foundation baseline release
+- [ ] Define stability tiers for public modules
+- [ ] Add compatibility lab checks for downstream consumers
+- [ ] Define Android artifact and iOS package distribution plan
 
 ## Risks And Watchouts
 
@@ -88,6 +104,7 @@ The Linear rollout should track at least these workstreams:
 - shared capability hardening
 - downstream sync strategy
 - docs and contribution guardrails
+- release engineering and compatibility validation
 
 ## Current Linear Mapping
 
@@ -97,3 +114,6 @@ The Linear rollout should track at least these workstreams:
 - `JIF-115`: Harden foundation capability modules
 - `JIF-116`: Document downstream private-app consumption workflow
 - `JIF-117`: Prepare the first foundation baseline release
+- `JIF-124`: Define stability tiers and public API surface
+- `JIF-125`: Design Android artifact and iOS package distribution
+- `JIF-126`: Add compatibility lab and upgrade smoke checks
