@@ -25,17 +25,21 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +59,8 @@ import com.example.mobilefoundation.core.designsystem.FoundationTheme
 import com.example.mobilefoundation.core.navigation.NavigationRoute
 import com.example.mobilefoundation.core.networking.NetworkingPreview
 import com.example.mobilefoundation.core.networking.RequestDescriptor
+import com.example.mobilefoundation.core.networking.StorefrontContractClient
+import com.example.mobilefoundation.core.networking.StorefrontContractSnapshot
 import com.example.mobilefoundation.core.observability.LogSignal
 import com.example.mobilefoundation.core.observability.ObservabilityPreview
 import com.example.mobilefoundation.core.permissions.PermissionKind
@@ -63,13 +69,42 @@ import com.example.mobilefoundation.core.runtime.StorefrontClientProfile
 import com.example.mobilefoundation.core.runtime.StorefrontPreviewData
 import com.example.mobilefoundation.core.runtime.ThemeAdapterResolution
 import com.example.mobilefoundation.core.storage.StoragePreview
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun FoundationApp() {
     var selectedRoute by remember { mutableStateOf<NavigationRoute?>(null) }
-    var requestedThemeSlug by remember { mutableStateOf("builtin-default") }
-    val themeResolution = remember(requestedThemeSlug) {
-        StorefrontPreviewData.resolveTheme(requestedThemeSlug)
+    var previewThemeSlug by remember { mutableStateOf("builtin-default") }
+    var apiBaseUrl by remember { mutableStateOf(StorefrontContractClient.defaultDevBaseUrl) }
+    var appliedApiBaseUrl by remember { mutableStateOf(StorefrontContractClient.defaultDevBaseUrl) }
+    var liveSnapshot by remember { mutableStateOf<StorefrontContractSnapshot?>(null) }
+    var liveProbeError by remember { mutableStateOf<String?>(null) }
+    var isProbing by remember { mutableStateOf(true) }
+
+    val previewResolution = remember(previewThemeSlug) {
+        StorefrontPreviewData.resolveTheme(previewThemeSlug)
+    }
+    val liveResolution = remember(liveSnapshot?.activeThemeSlug) {
+        liveSnapshot?.let { StorefrontPreviewData.resolveTheme(it.activeThemeSlug) }
+    }
+
+    LaunchedEffect(appliedApiBaseUrl) {
+        isProbing = true
+        liveSnapshot = null
+        liveProbeError = null
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                StorefrontContractClient.fetch(appliedApiBaseUrl)
+            }
+        }.onSuccess { snapshot ->
+            liveSnapshot = snapshot
+        }.onFailure { error ->
+            liveProbeError = error.message ?: "Unable to resolve storefront contract."
+        }
+
+        isProbing = false
     }
 
     FoundationTheme {
@@ -86,9 +121,16 @@ fun FoundationApp() {
                     FoundationHome(
                         contentPadding = innerPadding,
                         onOpenRoute = { selectedRoute = it },
-                        requestedThemeSlug = requestedThemeSlug,
-                        onThemeSelected = { requestedThemeSlug = it },
-                        themeResolution = themeResolution,
+                        apiBaseUrl = apiBaseUrl,
+                        onApiBaseUrlChange = { apiBaseUrl = it },
+                        onResolveCore = { appliedApiBaseUrl = apiBaseUrl },
+                        liveSnapshot = liveSnapshot,
+                        liveProbeError = liveProbeError,
+                        isProbing = isProbing,
+                        previewThemeSlug = previewThemeSlug,
+                        onPreviewThemeSelected = { previewThemeSlug = it },
+                        previewResolution = previewResolution,
+                        liveResolution = liveResolution,
                     )
                 } else {
                     DemoDetailScreen(
@@ -137,9 +179,16 @@ private fun FoundationTopBar(
 private fun FoundationHome(
     contentPadding: PaddingValues,
     onOpenRoute: (NavigationRoute) -> Unit,
-    requestedThemeSlug: String,
-    onThemeSelected: (String) -> Unit,
-    themeResolution: ThemeAdapterResolution,
+    apiBaseUrl: String,
+    onApiBaseUrlChange: (String) -> Unit,
+    onResolveCore: () -> Unit,
+    liveSnapshot: StorefrontContractSnapshot?,
+    liveProbeError: String?,
+    isProbing: Boolean,
+    previewThemeSlug: String,
+    onPreviewThemeSelected: (String) -> Unit,
+    previewResolution: ThemeAdapterResolution,
+    liveResolution: ThemeAdapterResolution?,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -170,9 +219,16 @@ private fun FoundationHome(
 
         item {
             StorefrontBasicVersionCard(
-                requestedThemeSlug = requestedThemeSlug,
-                onThemeSelected = onThemeSelected,
-                themeResolution = themeResolution,
+                apiBaseUrl = apiBaseUrl,
+                onApiBaseUrlChange = onApiBaseUrlChange,
+                onResolveCore = onResolveCore,
+                liveSnapshot = liveSnapshot,
+                liveProbeError = liveProbeError,
+                isProbing = isProbing,
+                previewThemeSlug = previewThemeSlug,
+                onPreviewThemeSelected = onPreviewThemeSelected,
+                previewResolution = previewResolution,
+                liveResolution = liveResolution,
             )
         }
 
@@ -199,9 +255,16 @@ private fun FoundationHome(
 
 @Composable
 private fun StorefrontBasicVersionCard(
-    requestedThemeSlug: String,
-    onThemeSelected: (String) -> Unit,
-    themeResolution: ThemeAdapterResolution,
+    apiBaseUrl: String,
+    onApiBaseUrlChange: (String) -> Unit,
+    onResolveCore: () -> Unit,
+    liveSnapshot: StorefrontContractSnapshot?,
+    liveProbeError: String?,
+    isProbing: Boolean,
+    previewThemeSlug: String,
+    onPreviewThemeSelected: (String) -> Unit,
+    previewResolution: ThemeAdapterResolution,
+    liveResolution: ThemeAdapterResolution?,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.78f)),
@@ -226,23 +289,77 @@ private fun StorefrontBasicVersionCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 
             Text(
-                text = "Resolved from /api/store/context + /api/themes/active in production. This host currently uses preview contract data while the adapter pipeline is being wired.",
+                text = "The real storefront runtime must resolve store and active theme from /api/store/context + /api/themes/active. This public host can probe those endpoints directly when your local Jiffoo core server is running.",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
 
-            PillRow(
-                labels = listOf(
-                    "store: ${StorefrontPreviewData.context.storeName}",
-                    "requested: $requestedThemeSlug",
-                    "effective: ${themeResolution.effectiveThemeSlug}",
-                    "official status: ${themeResolution.officialStatus}",
-                ),
-                dark = false,
+            Text(
+                text = "Live core contract probe",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
             )
 
+            OutlinedTextField(
+                value = apiBaseUrl,
+                onValueChange = onApiBaseUrlChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Core API base URL") },
+                supportingText = {
+                    Text("Android emulator default is 10.0.2.2:3001. Change this if your core server runs somewhere else.")
+                },
+            )
+
+            Button(onClick = onResolveCore) {
+                Text("Resolve from core")
+            }
+
+            when {
+                isProbing -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text(
+                            text = "Probing /api/store/context and /api/themes/active...",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+                        )
+                    }
+                }
+
+                liveSnapshot != null -> {
+                    PillRow(
+                        labels = listOf(
+                            "source: live core contract",
+                            "store: ${liveSnapshot.storeName}",
+                            "locale: ${liveSnapshot.defaultLocale}",
+                            "active: ${liveSnapshot.activeThemeSlug}",
+                            "adapter: ${liveResolution?.adapterId ?: "n/a"}",
+                        ),
+                        dark = false,
+                    )
+
+                    if (liveResolution?.usesFallback == true) {
+                        FallbackNotice(liveResolution)
+                    }
+                }
+
+                else -> {
+                    StatusNotice(
+                        title = "Live probe unavailable",
+                        message = liveProbeError ?: "Core contract probe is unavailable, so the host stays on preview contract data.",
+                        accent = Color(0xFFF5DDDA),
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
             Text(
-                text = "Preview theme switch",
+                text = "Support matrix preview",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -250,12 +367,21 @@ private fun StorefrontBasicVersionCard(
             PillRow(
                 labels = StorefrontPreviewData.officialThemes.map { it.slug },
                 dark = false,
-                selectedLabel = requestedThemeSlug,
-                onSelect = onThemeSelected,
+                selectedLabel = previewThemeSlug,
+                onSelect = onPreviewThemeSelected,
             )
 
-            if (themeResolution.usesFallback) {
-                FallbackNotice(themeResolution)
+            PillRow(
+                labels = listOf(
+                    "preview: $previewThemeSlug",
+                    "effective: ${previewResolution.effectiveThemeSlug}",
+                    "official status: ${previewResolution.officialStatus}",
+                ),
+                dark = false,
+            )
+
+            if (previewResolution.usesFallback) {
+                FallbackNotice(previewResolution)
             }
 
             Text(
@@ -324,6 +450,34 @@ private fun FallbackNotice(resolution: ThemeAdapterResolution) {
             )
             Text(
                 text = resolution.fallbackReason ?: "Theme fallback is active.",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusNotice(
+    title: String,
+    message: String,
+    accent: Color,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = accent),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = message,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
             )
@@ -684,7 +838,7 @@ private fun detailPrivateItems(route: NavigationRoute): List<String> = when (rou
     NavigationRoute.Navigation -> listOf("checkout flow", "account flow", "private deep links")
     NavigationRoute.Permissions -> listOf("business prompts", "feature-specific timing", "conversion copy")
     NavigationRoute.Storage -> listOf("real models", "sensitive schemas", "retention policy")
-    NavigationRoute.Networking -> listOf("real endpoints", "tenant auth", "domain error mapping")
+    NavigationRoute.Networking -> listOf("tenant auth adapters", "plugin-specific transport", "domain error mapping")
     NavigationRoute.Observability -> listOf("vendor config", "private event schema", "ops dashboards")
     NavigationRoute.Debug -> listOf("tenant-only flags", "private APIs", "ops credentials")
 }

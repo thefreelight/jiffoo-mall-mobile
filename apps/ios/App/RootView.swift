@@ -11,10 +11,16 @@ import SwiftUI
 
 @MainActor
 struct RootView: View {
-    @State private var requestedThemeSlug = "builtin-default"
+    @State private var previewThemeSlug = "builtin-default"
+    @State private var apiBaseUrl = StorefrontContractClient.defaultDevBaseUrl
+    @State private var appliedApiBaseUrl = StorefrontContractClient.defaultDevBaseUrl
+    @State private var liveSnapshot: StorefrontContractSnapshot?
+    @State private var liveProbeError: String?
+    @State private var isProbing = true
 
     var body: some View {
-        let themeResolution = StorefrontPreviewData.resolveTheme(requestedThemeSlug)
+        let previewResolution = StorefrontPreviewData.resolveTheme(previewThemeSlug)
+        let liveResolution = liveSnapshot.map { StorefrontPreviewData.resolveTheme($0.activeThemeSlug) }
 
         NavigationStack {
             ScrollView {
@@ -28,7 +34,10 @@ struct RootView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    storefrontBasicVersionCard(themeResolution: themeResolution)
+                    storefrontBasicVersionCard(
+                        previewResolution: previewResolution,
+                        liveResolution: liveResolution
+                    )
                     explanationCard()
 
                     ForEach(NavigationRoute.allCases, id: \.self) { route in
@@ -51,9 +60,15 @@ struct RootView: View {
                 DemoDetailView(route: route)
             }
         }
+        .task(id: appliedApiBaseUrl) {
+            await probeStorefront()
+        }
     }
 
-    private func storefrontBasicVersionCard(themeResolution: ThemeAdapterResolution) -> some View {
+    private func storefrontBasicVersionCard(
+        previewResolution: ThemeAdapterResolution,
+        liveResolution: ThemeAdapterResolution?
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Storefront Basic Version")
                 .font(.headline)
@@ -64,33 +79,76 @@ struct RootView: View {
 
             Divider()
 
-            Text("Resolved from /api/store/context + /api/themes/active in production. This host currently uses preview contract data while the adapter pipeline is being wired.")
+            Text("The real storefront runtime must resolve store and active theme from /api/store/context + /api/themes/active. This public host can probe those endpoints directly when your local Jiffoo core server is running.")
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 8) {
-                pill("store: \(StorefrontPreviewData.context.storeName)", dark: false)
-                pill("requested: \(requestedThemeSlug)", dark: false)
-                pill("effective: \(themeResolution.effectiveThemeSlug)", dark: false)
-                pill("official status: \(themeResolution.officialStatus)", dark: false)
+            Text("Live core contract probe")
+                .font(.subheadline.weight(.semibold))
+
+            TextField("Core API base URL", text: $apiBaseUrl)
+                .textFieldStyle(.roundedBorder)
+
+            Text("iOS and macOS preview hosts default to 127.0.0.1:3001. Change this if your core server runs elsewhere.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button("Resolve from core") {
+                appliedApiBaseUrl = apiBaseUrl
             }
 
-            Text("Preview theme switch")
+            if isProbing {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Probing /api/store/context and /api/themes/active...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let liveSnapshot {
+                VStack(alignment: .leading, spacing: 8) {
+                    pill("source: live core contract", dark: false)
+                    pill("store: \(liveSnapshot.storeName)", dark: false)
+                    pill("locale: \(liveSnapshot.defaultLocale)", dark: false)
+                    pill("active: \(liveSnapshot.activeThemeSlug)", dark: false)
+                    pill("adapter: \(liveResolution?.adapterId ?? "n/a")", dark: false)
+                }
+
+                if let liveResolution, liveResolution.usesFallback {
+                    fallbackNotice(liveResolution)
+                }
+            } else {
+                statusCard(
+                    title: "Live probe unavailable",
+                    message: liveProbeError ?? "Core contract probe is unavailable, so the host stays on preview contract data.",
+                    accent: Color(red: 0.96, green: 0.87, blue: 0.85)
+                )
+            }
+
+            Divider()
+
+            Text("Support matrix preview")
                 .font(.subheadline.weight(.semibold))
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(StorefrontPreviewData.officialThemes, id: \.self) { entry in
                     Button {
-                        requestedThemeSlug = entry.slug
+                        previewThemeSlug = entry.slug
                     } label: {
-                        pill(entry.slug, dark: false, selected: requestedThemeSlug == entry.slug)
+                        pill(entry.slug, dark: false, selected: previewThemeSlug == entry.slug)
                     }
                     .buttonStyle(.plain)
                 }
             }
 
-            if themeResolution.usesFallback {
-                fallbackNotice(themeResolution)
+            VStack(alignment: .leading, spacing: 8) {
+                pill("preview: \(previewThemeSlug)", dark: false)
+                pill("effective: \(previewResolution.effectiveThemeSlug)", dark: false)
+                pill("official status: \(previewResolution.officialStatus)", dark: false)
+            }
+
+            if previewResolution.usesFallback {
+                fallbackNotice(previewResolution)
             }
 
             Text("Basic storefront flows")
@@ -110,6 +168,20 @@ struct RootView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: DesignToken.cornerRadius, style: .continuous))
+    }
+
+    private func probeStorefront() async {
+        isProbing = true
+        liveSnapshot = nil
+        liveProbeError = nil
+
+        do {
+            liveSnapshot = try await StorefrontContractClient.fetch(baseUrl: appliedApiBaseUrl)
+        } catch {
+            liveProbeError = error.localizedDescription
+        }
+
+        isProbing = false
     }
 
     private func explanationCard() -> some View {
@@ -176,6 +248,20 @@ struct RootView: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(red: 0.96, green: 0.90, blue: 0.78))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func statusCard(title: String, message: String, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(accent)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -423,7 +509,7 @@ private struct DemoDetailView: View {
         case .navigation: return ["checkout flow", "account flow", "private deep links"]
         case .permissions: return ["business prompts", "feature-specific timing", "conversion copy"]
         case .storage: return ["real models", "sensitive schemas", "retention policy"]
-        case .networking: return ["real endpoints", "tenant auth", "domain error mapping"]
+        case .networking: return ["tenant auth adapters", "plugin-specific transport", "domain error mapping"]
         case .observability: return ["vendor config", "private event schema", "ops dashboards"]
         case .debug: return ["tenant-only flags", "private APIs", "ops credentials"]
         }

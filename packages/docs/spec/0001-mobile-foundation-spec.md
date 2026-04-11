@@ -17,6 +17,7 @@ It exists to provide a reusable Android and iOS foundation that can be consumed 
 - Centralize public design tokens, public assets, templates, and architecture guidance.
 - Define a release and upgrade model suitable for open-source consumers.
 - Provide a minimal storefront reference slice that proves native adapter selection and explicit fallback without forking core commerce semantics.
+- Allow the public hosts to probe documented core storefront contracts during local development without depending on private endpoints.
 - Define stable capability areas shared across native apps:
   - app shell
   - navigation

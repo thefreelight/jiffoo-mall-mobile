@@ -102,6 +102,7 @@ The current public mobile hosts expose a preview-only basic storefront slice so 
 
 Current behavior:
 
+- the public hosts can now probe `/api/store/context` and `/api/themes/active` from a local core runtime
 - `builtin-default` resolves to the first in-host native adapter preview path
 - `quiet-curator` and `stellar-midnight` stay in `planned` status and currently fall back explicitly
 - `limited`, `experimental`, and `unsupported` themes must show a declared fallback instead of failing silently

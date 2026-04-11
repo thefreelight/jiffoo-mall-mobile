@@ -13,6 +13,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - Android `core/*` capabilities now exist as real Gradle library modules, and iOS gallery screens read from package-level contracts instead of host-only placeholder data.
 - The first planned baseline release is now documented as `v0.0.1`, and release-readiness checks pass locally.
 - Both public hosts now expose a preview-only storefront basic version that proves `builtin-default` adapter selection and explicit fallback for not-yet-supported themes.
+- Both public hosts can now probe a local core storefront runtime and surface live store/theme resolution before falling back to preview data.
 
 ## Milestones
 
@@ -90,6 +91,7 @@ Exit criteria:
 Deliverables:
 
 - preview-only `builtin-default` storefront adapter path on Android and iOS
+- local core contract probe for `/api/store/context` and `/api/themes/active`
 - explicit fallback UX for `planned`, `limited`, `experimental`, and `unsupported` themes
 - contract-aligned explanation of how `/api/store/context` and `/api/themes/active` feed real runtime resolution
 
@@ -110,6 +112,7 @@ Exit criteria:
 - [x] Add compatibility lab checks for downstream consumers
 - [x] Define Android artifact and iOS package distribution plan
 - [x] Add a basic storefront reference slice with explicit theme fallback behavior
+- [x] Add live core contract probing to the public storefront reference hosts
 
 ## Risks And Watchouts
 
@@ -140,3 +143,5 @@ The Linear rollout should track at least these workstreams:
 - `JIF-124`: Define stability tiers and public API surface
 - `JIF-125`: Design Android artifact and iOS package distribution
 - `JIF-126`: Add compatibility lab and upgrade smoke checks
+- `JIF-130`: Ship baseline storefront adapter preview and fallback
+- `JIF-131`: Wire live core storefront contract probe into public hosts

@@ -21,6 +21,7 @@ Each platform should expose the same capability map, even if implementations dif
 Current storefront reference status:
 
 - `builtin-default` has a preview-only native adapter path in the public hosts
+- Android and iOS hosts can probe a local core runtime through `/api/store/context` and `/api/themes/active`
 - `quiet-curator` and `stellar-midnight` are still `planned` and currently resolve through explicit fallback
 - unsupported or limited themes must declare fallback behavior instead of failing silently
 - real storefront resolution still belongs to `/api/store/context` and `/api/themes/active` in core
