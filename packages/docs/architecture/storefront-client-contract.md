@@ -104,6 +104,7 @@ Current behavior:
 
 - the public hosts can now probe `/api/store/context` and `/api/themes/active` from a local core runtime
 - `builtin-default` resolves to the first in-host native adapter preview path
+- the public hosts can render a read-only catalog reference slice from `/api/products` and `/api/products/:id`
 - `quiet-curator` and `stellar-midnight` stay in `planned` status and currently fall back explicitly
 - `limited`, `experimental`, and `unsupported` themes must show a declared fallback instead of failing silently
 - production clients must still resolve store and active theme through `/api/store/context` and `/api/themes/active`

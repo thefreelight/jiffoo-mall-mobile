@@ -17,6 +17,13 @@ struct RootView: View {
     @State private var liveSnapshot: StorefrontContractSnapshot?
     @State private var liveProbeError: String?
     @State private var isProbing = true
+    @State private var liveProducts: [StorefrontProductListItem] = []
+    @State private var liveProductsError: String?
+    @State private var isLoadingProducts = false
+    @State private var selectedProductId = StorefrontCatalogPreviewData.products.first?.id ?? ""
+    @State private var liveProductDetail: StorefrontProductDetail?
+    @State private var liveProductDetailError: String?
+    @State private var isLoadingProductDetail = false
 
     var body: some View {
         let previewResolution = StorefrontPreviewData.resolveTheme(previewThemeSlug)
@@ -62,6 +69,12 @@ struct RootView: View {
         }
         .task(id: appliedApiBaseUrl) {
             await probeStorefront()
+        }
+        .task(id: liveSnapshot?.baseUrl) {
+            await loadCatalog()
+        }
+        .task(id: "\(selectedProductId)-\(liveSnapshot?.baseUrl ?? "preview")-\(liveProducts.count)") {
+            await loadProductDetail()
         }
     }
 
@@ -163,6 +176,10 @@ struct RootView: View {
             Text("Supported theme modes: \(StorefrontClientProfile.supportedThemeModes.joined(separator: ", "))")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+
+            Divider()
+
+            catalogReferenceSection()
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,6 +201,44 @@ struct RootView: View {
         isProbing = false
     }
 
+    private func loadCatalog() async {
+        liveProducts = []
+        liveProductsError = nil
+        liveProductDetail = nil
+        liveProductDetailError = nil
+
+        guard let liveSnapshot else { return }
+
+        isLoadingProducts = true
+        do {
+            let products = try await StorefrontContractClient.fetchProducts(baseUrl: liveSnapshot.baseUrl)
+            liveProducts = products
+            selectedProductId = products.first?.id ?? (StorefrontCatalogPreviewData.products.first?.id ?? "")
+        } catch {
+            liveProductsError = error.localizedDescription
+            selectedProductId = StorefrontCatalogPreviewData.products.first?.id ?? ""
+        }
+        isLoadingProducts = false
+    }
+
+    private func loadProductDetail() async {
+        liveProductDetail = nil
+        liveProductDetailError = nil
+
+        guard let liveSnapshot, !liveProducts.isEmpty, !selectedProductId.isEmpty else { return }
+
+        isLoadingProductDetail = true
+        do {
+            liveProductDetail = try await StorefrontContractClient.fetchProductDetail(
+                baseUrl: liveSnapshot.baseUrl,
+                productId: selectedProductId
+            )
+        } catch {
+            liveProductDetailError = error.localizedDescription
+        }
+        isLoadingProductDetail = false
+    }
+
     private func explanationCard() -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("How To Use This")
@@ -199,6 +254,71 @@ struct RootView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white.opacity(0.72))
         .clipShape(RoundedRectangle(cornerRadius: DesignToken.cornerRadius, style: .continuous))
+    }
+
+    private func catalogReferenceSection() -> some View {
+        let effectiveProducts = liveProducts.isEmpty ? StorefrontCatalogPreviewData.products : liveProducts
+        let isUsingLiveCatalog = !liveProducts.isEmpty
+        let previewDetail = StorefrontCatalogPreviewData.detail(for: selectedProductId)
+        let effectiveDetail = isUsingLiveCatalog ? liveProductDetail : previewDetail
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Catalog reference")
+                .font(.subheadline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                pill("catalog source: \(isUsingLiveCatalog ? "live core" : "preview fallback")", dark: false)
+                pill("items: \(effectiveProducts.count)", dark: false)
+                pill("selected: \(selectedProductId)", dark: false)
+            }
+
+            if isLoadingProducts {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading products from /api/products...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !isUsingLiveCatalog, let liveProductsError {
+                statusCard(
+                    title: "Catalog fallback active",
+                    message: liveProductsError,
+                    accent: Color(red: 0.96, green: 0.90, blue: 0.78)
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(effectiveProducts, id: \.id) { product in
+                    Button {
+                        selectedProductId = product.id
+                    } label: {
+                        productListCard(product: product, selected: product.id == selectedProductId)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if isLoadingProductDetail {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading product detail...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let effectiveDetail {
+                productDetailCard(product: effectiveDetail, sourceLabel: isUsingLiveCatalog ? "live core" : "preview fallback")
+            } else if let liveProductDetailError {
+                statusCard(
+                    title: "Detail unavailable",
+                    message: liveProductDetailError,
+                    accent: Color(red: 0.96, green: 0.87, blue: 0.85)
+                )
+            }
+        }
     }
 
     private func galleryCard(route: NavigationRoute) -> some View {
@@ -235,6 +355,51 @@ struct RootView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tint(for: route))
         .clipShape(RoundedRectangle(cornerRadius: DesignToken.cornerRadius, style: .continuous))
+    }
+
+    private func productListCard(product: StorefrontProductListItem, selected: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(product.name)
+                .font(.body.weight(.semibold))
+            if let description = product.description {
+                Text(description)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                pill("price: \(formatPrice(product.price))", dark: false)
+                pill("stock: \(product.stock)", dark: false)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(selected ? Color(red: 0.87, green: 0.92, blue: 0.90) : .white.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func productDetailCard(product: StorefrontProductDetail, sourceLabel: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Product detail")
+                .font(.subheadline.weight(.semibold))
+            Text(product.name)
+                .font(.headline)
+            if let description = product.description {
+                Text(description)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                pill("source: \(sourceLabel)", dark: false)
+                pill("price: \(formatPrice(product.price))", dark: false)
+                pill("stock: \(product.stock)", dark: false)
+                pill("shipping: \(product.requiresShipping ? "required" : "not required")", dark: false)
+                pill("variants: \(product.variants.count)", dark: false)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func fallbackNotice(_ resolution: ThemeAdapterResolution) -> some View {
@@ -297,6 +462,10 @@ struct RootView: View {
             .background(selected ? tint(for: .designSystem) : (dark ? .white.opacity(0.16) : Color.black.opacity(0.08)))
             .foregroundStyle(dark || selected ? .white : .primary)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func formatPrice(_ value: Double) -> String {
+        "$" + String(format: "%.2f", value)
     }
 }
 

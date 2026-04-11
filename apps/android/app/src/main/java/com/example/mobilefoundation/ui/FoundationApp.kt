@@ -59,8 +59,11 @@ import com.example.mobilefoundation.core.designsystem.FoundationTheme
 import com.example.mobilefoundation.core.navigation.NavigationRoute
 import com.example.mobilefoundation.core.networking.NetworkingPreview
 import com.example.mobilefoundation.core.networking.RequestDescriptor
+import com.example.mobilefoundation.core.networking.StorefrontCatalogPreviewData
 import com.example.mobilefoundation.core.networking.StorefrontContractClient
 import com.example.mobilefoundation.core.networking.StorefrontContractSnapshot
+import com.example.mobilefoundation.core.networking.StorefrontProductDetail
+import com.example.mobilefoundation.core.networking.StorefrontProductListItem
 import com.example.mobilefoundation.core.observability.LogSignal
 import com.example.mobilefoundation.core.observability.ObservabilityPreview
 import com.example.mobilefoundation.core.permissions.PermissionKind
@@ -81,6 +84,13 @@ fun FoundationApp() {
     var liveSnapshot by remember { mutableStateOf<StorefrontContractSnapshot?>(null) }
     var liveProbeError by remember { mutableStateOf<String?>(null) }
     var isProbing by remember { mutableStateOf(true) }
+    var liveProducts by remember { mutableStateOf<List<StorefrontProductListItem>>(emptyList()) }
+    var liveProductsError by remember { mutableStateOf<String?>(null) }
+    var isLoadingProducts by remember { mutableStateOf(false) }
+    var selectedProductId by remember { mutableStateOf(StorefrontCatalogPreviewData.products.first().id) }
+    var liveProductDetail by remember { mutableStateOf<StorefrontProductDetail?>(null) }
+    var liveProductDetailError by remember { mutableStateOf<String?>(null) }
+    var isLoadingProductDetail by remember { mutableStateOf(false) }
 
     val previewResolution = remember(previewThemeSlug) {
         StorefrontPreviewData.resolveTheme(previewThemeSlug)
@@ -107,6 +117,54 @@ fun FoundationApp() {
         isProbing = false
     }
 
+    LaunchedEffect(liveSnapshot?.baseUrl) {
+        liveProducts = emptyList()
+        liveProductsError = null
+        liveProductDetail = null
+        liveProductDetailError = null
+
+        val snapshot = liveSnapshot ?: return@LaunchedEffect
+        isLoadingProducts = true
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                StorefrontContractClient.fetchProducts(snapshot.baseUrl)
+            }
+        }.onSuccess { products ->
+            liveProducts = products
+            selectedProductId = products.firstOrNull()?.id ?: StorefrontCatalogPreviewData.products.first().id
+        }.onFailure { error ->
+            liveProductsError = error.message ?: "Unable to load products from core."
+            selectedProductId = StorefrontCatalogPreviewData.products.first().id
+        }
+
+        isLoadingProducts = false
+    }
+
+    LaunchedEffect(selectedProductId, liveSnapshot?.baseUrl, liveProducts.isNotEmpty()) {
+        liveProductDetail = null
+        liveProductDetailError = null
+
+        val snapshot = liveSnapshot
+        if (snapshot == null || liveProducts.isEmpty()) {
+            return@LaunchedEffect
+        }
+
+        isLoadingProductDetail = true
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                StorefrontContractClient.fetchProductDetail(snapshot.baseUrl, selectedProductId)
+            }
+        }.onSuccess { detail ->
+            liveProductDetail = detail
+        }.onFailure { error ->
+            liveProductDetailError = error.message ?: "Unable to load product detail from core."
+        }
+
+        isLoadingProductDetail = false
+    }
+
     FoundationTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Scaffold(
@@ -127,6 +185,14 @@ fun FoundationApp() {
                         liveSnapshot = liveSnapshot,
                         liveProbeError = liveProbeError,
                         isProbing = isProbing,
+                        liveProducts = liveProducts,
+                        liveProductsError = liveProductsError,
+                        isLoadingProducts = isLoadingProducts,
+                        selectedProductId = selectedProductId,
+                        onProductSelected = { selectedProductId = it },
+                        liveProductDetail = liveProductDetail,
+                        liveProductDetailError = liveProductDetailError,
+                        isLoadingProductDetail = isLoadingProductDetail,
                         previewThemeSlug = previewThemeSlug,
                         onPreviewThemeSelected = { previewThemeSlug = it },
                         previewResolution = previewResolution,
@@ -185,6 +251,14 @@ private fun FoundationHome(
     liveSnapshot: StorefrontContractSnapshot?,
     liveProbeError: String?,
     isProbing: Boolean,
+    liveProducts: List<StorefrontProductListItem>,
+    liveProductsError: String?,
+    isLoadingProducts: Boolean,
+    selectedProductId: String,
+    onProductSelected: (String) -> Unit,
+    liveProductDetail: StorefrontProductDetail?,
+    liveProductDetailError: String?,
+    isLoadingProductDetail: Boolean,
     previewThemeSlug: String,
     onPreviewThemeSelected: (String) -> Unit,
     previewResolution: ThemeAdapterResolution,
@@ -225,6 +299,14 @@ private fun FoundationHome(
                 liveSnapshot = liveSnapshot,
                 liveProbeError = liveProbeError,
                 isProbing = isProbing,
+                liveProducts = liveProducts,
+                liveProductsError = liveProductsError,
+                isLoadingProducts = isLoadingProducts,
+                selectedProductId = selectedProductId,
+                onProductSelected = onProductSelected,
+                liveProductDetail = liveProductDetail,
+                liveProductDetailError = liveProductDetailError,
+                isLoadingProductDetail = isLoadingProductDetail,
                 previewThemeSlug = previewThemeSlug,
                 onPreviewThemeSelected = onPreviewThemeSelected,
                 previewResolution = previewResolution,
@@ -261,6 +343,14 @@ private fun StorefrontBasicVersionCard(
     liveSnapshot: StorefrontContractSnapshot?,
     liveProbeError: String?,
     isProbing: Boolean,
+    liveProducts: List<StorefrontProductListItem>,
+    liveProductsError: String?,
+    isLoadingProducts: Boolean,
+    selectedProductId: String,
+    onProductSelected: (String) -> Unit,
+    liveProductDetail: StorefrontProductDetail?,
+    liveProductDetailError: String?,
+    isLoadingProductDetail: Boolean,
     previewThemeSlug: String,
     onPreviewThemeSelected: (String) -> Unit,
     previewResolution: ThemeAdapterResolution,
@@ -399,6 +489,203 @@ private fun StorefrontBasicVersionCard(
                 text = "Supported theme modes: ${StorefrontClientProfile.supportedThemeModes.joinToString()}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+            CatalogReferenceSection(
+                liveProducts = liveProducts,
+                liveProductsError = liveProductsError,
+                isLoadingProducts = isLoadingProducts,
+                selectedProductId = selectedProductId,
+                onProductSelected = onProductSelected,
+                liveProductDetail = liveProductDetail,
+                liveProductDetailError = liveProductDetailError,
+                isLoadingProductDetail = isLoadingProductDetail,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CatalogReferenceSection(
+    liveProducts: List<StorefrontProductListItem>,
+    liveProductsError: String?,
+    isLoadingProducts: Boolean,
+    selectedProductId: String,
+    onProductSelected: (String) -> Unit,
+    liveProductDetail: StorefrontProductDetail?,
+    liveProductDetailError: String?,
+    isLoadingProductDetail: Boolean,
+) {
+    val effectiveProducts = if (liveProducts.isNotEmpty()) liveProducts else StorefrontCatalogPreviewData.products
+    val previewDetail = StorefrontCatalogPreviewData.detailFor(selectedProductId)
+    val isUsingLiveCatalog = liveProducts.isNotEmpty()
+    val effectiveDetail = if (isUsingLiveCatalog) liveProductDetail else previewDetail
+
+    Text(
+        text = "Catalog reference",
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+    )
+
+    PillRow(
+        labels = listOf(
+            "catalog source: ${if (isUsingLiveCatalog) "live core" else "preview fallback"}",
+            "items: ${effectiveProducts.size}",
+            "selected: $selectedProductId",
+        ),
+        dark = false,
+    )
+
+    if (isLoadingProducts) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(
+                text = "Loading products from /api/products...",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+        }
+    }
+
+    if (!isUsingLiveCatalog && liveProductsError != null) {
+        StatusNotice(
+            title = "Catalog fallback active",
+            message = liveProductsError,
+            accent = Color(0xFFF6E6C6),
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        effectiveProducts.forEach { product ->
+            ProductListCard(
+                product = product,
+                selected = product.id == selectedProductId,
+                onClick = { onProductSelected(product.id) },
+            )
+        }
+    }
+
+    when {
+        isLoadingProductDetail -> {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                Text(
+                    text = "Loading product detail...",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+                )
+            }
+        }
+
+        !isUsingLiveCatalog -> {
+            if (previewDetail != null) {
+                ProductDetailCard(product = previewDetail, sourceLabel = "preview fallback")
+            }
+        }
+
+        liveProductDetail != null -> {
+            ProductDetailCard(product = liveProductDetail, sourceLabel = "live core")
+        }
+
+        liveProductDetailError != null -> {
+            StatusNotice(
+                title = "Detail unavailable",
+                message = liveProductDetailError,
+                accent = Color(0xFFF5DDDA),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductListCard(
+    product: StorefrontProductListItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) Color(0xFFDDEBE7) else Color.White.copy(alpha = 0.72f),
+        ),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = product.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            product.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.66f),
+                )
+            }
+            PillRow(
+                labels = listOf(
+                    "price: ${formatPrice(product.price)}",
+                    "stock: ${product.stock}",
+                ),
+                dark = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailCard(
+    product: StorefrontProductDetail,
+    sourceLabel: String,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.78f)),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Product detail",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = product.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            product.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+                )
+            }
+            PillRow(
+                labels = listOf(
+                    "source: $sourceLabel",
+                    "price: ${formatPrice(product.price)}",
+                    "stock: ${product.stock}",
+                    "shipping: ${if (product.requiresShipping) "required" else "not required"}",
+                    "variants: ${product.variants.size}",
+                ),
+                dark = false,
             )
         }
     }
@@ -862,6 +1149,8 @@ private fun routeAccent(route: NavigationRoute): Color = when (route) {
     NavigationRoute.Observability -> Color(0xFF6A3B1A)
     NavigationRoute.Debug -> Color(0xFF8A2D3B)
 }
+
+private fun formatPrice(value: Double): String = "$" + String.format("%.2f", value)
 
 @Preview(showBackground = true, backgroundColor = 0xFFFAF7F0, showSystemUi = true, widthDp = 390, heightDp = 844)
 @Composable

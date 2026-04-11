@@ -18,6 +18,7 @@ It exists to provide a reusable Android and iOS foundation that can be consumed 
 - Define a release and upgrade model suitable for open-source consumers.
 - Provide a minimal storefront reference slice that proves native adapter selection and explicit fallback without forking core commerce semantics.
 - Allow the public hosts to probe documented core storefront contracts during local development without depending on private endpoints.
+- Demonstrate a read-only catalog and product-detail reference flow on top of the documented core commerce contract.
 - Define stable capability areas shared across native apps:
   - app shell
   - navigation

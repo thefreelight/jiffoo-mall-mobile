@@ -16,6 +16,124 @@ data class StorefrontContractSnapshot(
     val activeThemeSource: String?,
 )
 
+data class StorefrontProductListItem(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val price: Double,
+    val stock: Int,
+    val images: List<String>,
+)
+
+data class StorefrontProductVariant(
+    val id: String,
+    val name: String,
+    val salePrice: Double,
+    val baseStock: Int,
+)
+
+data class StorefrontProductDetail(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val price: Double,
+    val stock: Int,
+    val images: List<String>,
+    val requiresShipping: Boolean,
+    val variants: List<StorefrontProductVariant>,
+)
+
+object StorefrontCatalogPreviewData {
+    val products = listOf(
+        StorefrontProductListItem(
+            id = "preview-foundation-watch",
+            name = "Foundation Watch",
+            description = "Baseline storefront sample product used to demonstrate the public client contract.",
+            price = 299.0,
+            stock = 18,
+            images = emptyList(),
+        ),
+        StorefrontProductListItem(
+            id = "preview-curator-bundle",
+            name = "Curator Bundle",
+            description = "Editorial-style sample item for theme-pack adapter previews.",
+            price = 89.0,
+            stock = 9,
+            images = emptyList(),
+        ),
+        StorefrontProductListItem(
+            id = "preview-stellar-seat",
+            name = "Stellar Seat",
+            description = "SaaS-flavored sample SKU for the first-wave storefront gallery.",
+            price = 49.0,
+            stock = 120,
+            images = emptyList(),
+        ),
+    )
+
+    val details = listOf(
+        StorefrontProductDetail(
+            id = "preview-foundation-watch",
+            name = "Foundation Watch",
+            description = "Baseline storefront sample product used to demonstrate the public client contract.",
+            price = 299.0,
+            stock = 18,
+            images = emptyList(),
+            requiresShipping = true,
+            variants = listOf(
+                StorefrontProductVariant(
+                    id = "preview-foundation-watch-default",
+                    name = "Default",
+                    salePrice = 299.0,
+                    baseStock = 18,
+                ),
+            ),
+        ),
+        StorefrontProductDetail(
+            id = "preview-curator-bundle",
+            name = "Curator Bundle",
+            description = "Editorial-style sample item for theme-pack adapter previews.",
+            price = 89.0,
+            stock = 9,
+            images = emptyList(),
+            requiresShipping = false,
+            variants = listOf(
+                StorefrontProductVariant(
+                    id = "preview-curator-bundle-default",
+                    name = "Digital access",
+                    salePrice = 89.0,
+                    baseStock = 9,
+                ),
+            ),
+        ),
+        StorefrontProductDetail(
+            id = "preview-stellar-seat",
+            name = "Stellar Seat",
+            description = "SaaS-flavored sample SKU for the first-wave storefront gallery.",
+            price = 49.0,
+            stock = 120,
+            images = emptyList(),
+            requiresShipping = false,
+            variants = listOf(
+                StorefrontProductVariant(
+                    id = "preview-stellar-seat-monthly",
+                    name = "Monthly",
+                    salePrice = 49.0,
+                    baseStock = 120,
+                ),
+                StorefrontProductVariant(
+                    id = "preview-stellar-seat-annual",
+                    name = "Annual",
+                    salePrice = 399.0,
+                    baseStock = 64,
+                ),
+            ),
+        ),
+    )
+
+    fun detailFor(productId: String): StorefrontProductDetail? = details.firstOrNull { it.id == productId }
+}
+
 object StorefrontContractClient {
     const val defaultDevBaseUrl = "http://10.0.2.2:3001"
 
@@ -45,6 +163,64 @@ object StorefrontContractClient {
             activeThemeSlug = activeThemeData.optString("slug"),
             activeThemeType = activeThemeData.optString("type").takeIf { it.isNotBlank() },
             activeThemeSource = activeThemeData.optString("source").takeIf { it.isNotBlank() },
+        )
+    }
+
+    fun fetchProducts(baseUrl: String, limit: Int = 6): List<StorefrontProductListItem> {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val envelope = requestEnvelope("$normalizedBaseUrl/api/products?page=1&limit=$limit")
+        val data = requireDataObject(envelope, "/api/products")
+        val items = data.optJSONArray("items")
+            ?: throw IOException("Contract probe returned no items for /api/products")
+
+        return buildList {
+            for (index in 0 until items.length()) {
+                val item = items.optJSONObject(index) ?: continue
+                add(
+                    StorefrontProductListItem(
+                        id = item.optString("id"),
+                        name = item.optString("name"),
+                        description = item.optString("description").takeIf { it.isNotBlank() },
+                        price = item.optDouble("price"),
+                        stock = item.optInt("stock"),
+                        images = jsonArrayStrings(item.optJSONArray("images")),
+                    ),
+                )
+            }
+        }
+    }
+
+    fun fetchProductDetail(baseUrl: String, productId: String): StorefrontProductDetail {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val envelope = requestEnvelope("$normalizedBaseUrl/api/products/$productId")
+        val data = requireDataObject(envelope, "/api/products/:id")
+
+        val variantsArray = data.optJSONArray("variants")
+        val variants = buildList {
+            if (variantsArray != null) {
+                for (index in 0 until variantsArray.length()) {
+                    val item = variantsArray.optJSONObject(index) ?: continue
+                    add(
+                        StorefrontProductVariant(
+                            id = item.optString("id"),
+                            name = item.optString("name"),
+                            salePrice = item.optDouble("salePrice"),
+                            baseStock = item.optInt("baseStock"),
+                        ),
+                    )
+                }
+            }
+        }
+
+        return StorefrontProductDetail(
+            id = data.optString("id"),
+            name = data.optString("name"),
+            description = data.optString("description").takeIf { it.isNotBlank() },
+            price = data.optDouble("price"),
+            stock = data.optInt("stock"),
+            images = jsonArrayStrings(data.optJSONArray("images")),
+            requiresShipping = data.optBoolean("requiresShipping"),
+            variants = variants,
         )
     }
 
@@ -83,5 +259,16 @@ object StorefrontContractClient {
 
         return envelope.optJSONObject("data")
             ?: throw IOException("Contract probe returned no data for $contractPath")
+    }
+
+    private fun jsonArrayStrings(array: org.json.JSONArray?): List<String> = buildList {
+        if (array != null) {
+            for (index in 0 until array.length()) {
+                val value = array.optString(index)
+                if (value.isNotBlank()) {
+                    add(value)
+                }
+            }
+        }
     }
 }

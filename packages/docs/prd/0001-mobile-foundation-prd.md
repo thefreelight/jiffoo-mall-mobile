@@ -43,6 +43,7 @@ It should also give new teams one concrete public reference for how a storefront
 - Make release-unit names and adoption paths explicit enough that consumers do not need to learn the repository internals first.
 - Demonstrate a basic `builtin-default` storefront reference flow before any private app introduces product-specific adapters.
 - Let maintainers verify the core storefront contract locally from the public hosts before private apps add any product logic.
+- Give new teams one concrete read-only catalog example before they start layering private cart, checkout, or account flows on top.
 
 ## In Scope
 

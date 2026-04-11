@@ -43,6 +43,142 @@ public struct StorefrontContractSnapshot: Sendable, Hashable {
     }
 }
 
+public struct StorefrontProductListItem: Sendable, Hashable {
+    public let id: String
+    public let name: String
+    public let description: String?
+    public let price: Double
+    public let stock: Int
+    public let images: [String]
+
+    public init(id: String, name: String, description: String?, price: Double, stock: Int, images: [String]) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.price = price
+        self.stock = stock
+        self.images = images
+    }
+}
+
+public struct StorefrontProductVariant: Sendable, Hashable {
+    public let id: String
+    public let name: String
+    public let salePrice: Double
+    public let baseStock: Int
+
+    public init(id: String, name: String, salePrice: Double, baseStock: Int) {
+        self.id = id
+        self.name = name
+        self.salePrice = salePrice
+        self.baseStock = baseStock
+    }
+}
+
+public struct StorefrontProductDetail: Sendable, Hashable {
+    public let id: String
+    public let name: String
+    public let description: String?
+    public let price: Double
+    public let stock: Int
+    public let images: [String]
+    public let requiresShipping: Bool
+    public let variants: [StorefrontProductVariant]
+
+    public init(
+        id: String,
+        name: String,
+        description: String?,
+        price: Double,
+        stock: Int,
+        images: [String],
+        requiresShipping: Bool,
+        variants: [StorefrontProductVariant]
+    ) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.price = price
+        self.stock = stock
+        self.images = images
+        self.requiresShipping = requiresShipping
+        self.variants = variants
+    }
+}
+
+public enum StorefrontCatalogPreviewData {
+    public static let products: [StorefrontProductListItem] = [
+        StorefrontProductListItem(
+            id: "preview-foundation-watch",
+            name: "Foundation Watch",
+            description: "Baseline storefront sample product used to demonstrate the public client contract.",
+            price: 299,
+            stock: 18,
+            images: []
+        ),
+        StorefrontProductListItem(
+            id: "preview-curator-bundle",
+            name: "Curator Bundle",
+            description: "Editorial-style sample item for theme-pack adapter previews.",
+            price: 89,
+            stock: 9,
+            images: []
+        ),
+        StorefrontProductListItem(
+            id: "preview-stellar-seat",
+            name: "Stellar Seat",
+            description: "SaaS-flavored sample SKU for the first-wave storefront gallery.",
+            price: 49,
+            stock: 120,
+            images: []
+        )
+    ]
+
+    public static let details: [StorefrontProductDetail] = [
+        StorefrontProductDetail(
+            id: "preview-foundation-watch",
+            name: "Foundation Watch",
+            description: "Baseline storefront sample product used to demonstrate the public client contract.",
+            price: 299,
+            stock: 18,
+            images: [],
+            requiresShipping: true,
+            variants: [
+                StorefrontProductVariant(id: "preview-foundation-watch-default", name: "Default", salePrice: 299, baseStock: 18)
+            ]
+        ),
+        StorefrontProductDetail(
+            id: "preview-curator-bundle",
+            name: "Curator Bundle",
+            description: "Editorial-style sample item for theme-pack adapter previews.",
+            price: 89,
+            stock: 9,
+            images: [],
+            requiresShipping: false,
+            variants: [
+                StorefrontProductVariant(id: "preview-curator-bundle-default", name: "Digital access", salePrice: 89, baseStock: 9)
+            ]
+        ),
+        StorefrontProductDetail(
+            id: "preview-stellar-seat",
+            name: "Stellar Seat",
+            description: "SaaS-flavored sample SKU for the first-wave storefront gallery.",
+            price: 49,
+            stock: 120,
+            images: [],
+            requiresShipping: false,
+            variants: [
+                StorefrontProductVariant(id: "preview-stellar-seat-monthly", name: "Monthly", salePrice: 49, baseStock: 120),
+                StorefrontProductVariant(id: "preview-stellar-seat-annual", name: "Annual", salePrice: 399, baseStock: 64)
+            ]
+        )
+    ]
+
+    public static func detail(for productId: String) -> StorefrontProductDetail? {
+        details.first(where: { $0.id == productId })
+    }
+}
+
 public enum StorefrontContractClient {
     public static let defaultDevBaseUrl = "http://127.0.0.1:3001"
 
@@ -71,8 +207,51 @@ public enum StorefrontContractClient {
         )
     }
 
+    public static func fetchProducts(baseUrl: String, limit: Int = 6) async throws -> [StorefrontProductListItem] {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let envelope: ProductListEnvelope = try await request(path: "/api/products?page=1&limit=\(limit)", baseUrl: normalizedBaseUrl)
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/products")
+        }
+
+        return data.items.map {
+            StorefrontProductListItem(
+                id: $0.id,
+                name: $0.name,
+                description: $0.description,
+                price: $0.price,
+                stock: $0.stock,
+                images: $0.images
+            )
+        }
+    }
+
+    public static func fetchProductDetail(baseUrl: String, productId: String) async throws -> StorefrontProductDetail {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let envelope: ProductDetailEnvelope = try await request(path: "/api/products/\(productId)", baseUrl: normalizedBaseUrl)
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/products/:id")
+        }
+
+        return StorefrontProductDetail(
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            price: data.price,
+            stock: data.stock,
+            images: data.images,
+            requiresShipping: data.requiresShipping,
+            variants: data.variants.map {
+                StorefrontProductVariant(id: $0.id, name: $0.name, salePrice: $0.salePrice, baseStock: $0.baseStock)
+            }
+        )
+    }
+
     private static func request<T: Decodable>(path: String, baseUrl: String) async throws -> T {
-        guard let url = URL(string: "\(baseUrl)\(path)") else {
+        let normalizedBaseUrl = normalize(baseUrl)
+        guard let url = URL(string: "\(normalizedBaseUrl)\(path)") else {
             throw StorefrontContractError.invalidBaseUrl(baseUrl)
         }
 
@@ -92,6 +271,14 @@ public enum StorefrontContractClient {
         }
 
         return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private static func normalize(_ baseUrl: String) -> String {
+        var normalized = baseUrl
+        while normalized.hasSuffix("/") {
+            normalized.removeLast()
+        }
+        return normalized
     }
 
     private static func perform(request: URLRequest) async throws -> (Data, URLResponse) {
@@ -147,6 +334,47 @@ private struct ActiveThemePayload: Decodable {
     let slug: String
     let type: String?
     let source: String?
+}
+
+private struct ProductListEnvelope: Decodable {
+    let success: Bool
+    let data: ProductListPayload?
+}
+
+private struct ProductListPayload: Decodable {
+    let items: [ProductListPayloadItem]
+}
+
+private struct ProductListPayloadItem: Decodable {
+    let id: String
+    let name: String
+    let description: String?
+    let price: Double
+    let stock: Int
+    let images: [String]
+}
+
+private struct ProductDetailEnvelope: Decodable {
+    let success: Bool
+    let data: ProductDetailPayload?
+}
+
+private struct ProductDetailPayload: Decodable {
+    let id: String
+    let name: String
+    let description: String?
+    let price: Double
+    let stock: Int
+    let images: [String]
+    let requiresShipping: Bool
+    let variants: [ProductVariantPayload]
+}
+
+private struct ProductVariantPayload: Decodable {
+    let id: String
+    let name: String
+    let salePrice: Double
+    let baseStock: Int
 }
 
 private enum StorefrontContractError: LocalizedError {

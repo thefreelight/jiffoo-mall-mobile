@@ -25,6 +25,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added a concrete `v0.0.1` baseline release plan, release templates, and release-readiness script.
 - Added a preview-only storefront basic version on Android and iOS that demonstrates `builtin-default` adapter selection, supported flow scope, and explicit fallback behavior.
 - Added live storefront contract probing from the public hosts so Android and iOS can resolve `/api/store/context` and `/api/themes/active` against a local core runtime.
+- Added a read-only catalog and product-detail reference slice that can consume `/api/products` and `/api/products/:id` when the local core runtime is available.
 
 ### Changed
 
@@ -35,6 +36,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Hardened platform capability contracts so both Android and iOS hosts now read from foundation modules instead of only host-local placeholders.
 - Clarified that the public hosts currently ship only the baseline storefront adapter preview and must fall back visibly for themes that are still planned, limited, experimental, or unsupported.
 - Clarified that documented core storefront endpoints can appear in the public networking layer, while tenant-private and product-private endpoints must still stay out.
+- Clarified that the first public commerce reference flow stays read-only and stops before cart mutation, checkout, or account-specific product behavior.
 
 ### Removed
 
