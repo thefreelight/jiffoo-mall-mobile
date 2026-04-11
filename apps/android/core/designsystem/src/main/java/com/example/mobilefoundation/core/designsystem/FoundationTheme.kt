@@ -1,5 +1,6 @@
-package com.example.mobilefoundation.ui.theme
+package com.example.mobilefoundation.core.designsystem
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -10,19 +11,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+data class TokenSwatch(
+    val label: String,
+    val color: Color,
+)
+
+object DesignToken {
+    val surface = Color(0xFFFAF7F0)
+    val surfaceInverse = Color(0xFF1E1C1A)
+    val primary = Color(0xFF1F7A63)
+    val accent = Color(0xFFE58E26)
+    val tertiary = Color(0xFF28356E)
+    val text = Color(0xFF181613)
+    val muted = Color(0xFF7A746B)
+    const val cornerRadius = 16
+
+    val swatches = listOf(
+        TokenSwatch("Surface", surface),
+        TokenSwatch("Primary", primary),
+        TokenSwatch("Accent", accent),
+        TokenSwatch("Tertiary", tertiary),
+    )
+
+    val previewTags = listOf("tokens", "theme", "components")
+}
+
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF1F7A63),
-    secondary = Color(0xFFE58E26),
-    tertiary = Color(0xFF28356E),
-    background = Color(0xFFFAF7F0),
-    surface = Color(0xFFFAF7F0),
+    primary = DesignToken.primary,
+    secondary = DesignToken.accent,
+    tertiary = DesignToken.tertiary,
+    background = DesignToken.surface,
+    surface = DesignToken.surface,
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = Color(0xFF181613),
-    onSurface = Color(0xFF181613),
+    onBackground = DesignToken.text,
+    onSurface = DesignToken.text,
 )
 
 private val DarkColors = darkColorScheme(
@@ -59,7 +86,9 @@ fun FoundationTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = LightColors,
         typography = FoundationTypography,
-        shapes = Shapes(),
+        shapes = Shapes(
+            extraLarge = RoundedCornerShape(DesignToken.cornerRadius.dp),
+        ),
         content = content,
     )
 }

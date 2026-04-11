@@ -21,6 +21,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added a public API catalog and stability matrix so consumers can see which capabilities are stable, experimental, or internal.
 - Added a concrete distribution blueprint and release manifest for Android artifacts and Swift Package products.
 - Added a compatibility lab definition and smoke-check script for release readiness.
+- Added real Android `core/*` library modules for runtime, navigation, design system, networking, storage, permissions, observability, and debug capabilities.
 
 ### Changed
 
@@ -28,6 +29,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Clarified the public/private boundary in docs and repo structure.
 - Replaced the Android template-only build with a real Gradle application module and wrapper.
 - Expanded the execution plan from “runnable repo” toward “versioned platform product.”
+- Hardened platform capability contracts so both Android and iOS hosts now read from foundation modules instead of only host-local placeholders.
 
 ### Removed
 

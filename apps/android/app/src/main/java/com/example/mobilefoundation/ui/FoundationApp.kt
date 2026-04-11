@@ -9,12 +9,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Dataset
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -41,79 +49,41 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Dataset
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Route
-import androidx.compose.material.icons.filled.Security
-import com.example.mobilefoundation.ui.theme.FoundationTheme
-
-private enum class DemoDestination(
-    val title: String,
-    val summary: String,
-    val icon: ImageVector,
-    val accent: Color,
-    val pills: List<String>,
-) {
-    DesignSystem(
-        title = "Design System",
-        summary = "Colors, radius, typography, and component behavior that every downstream app can inherit.",
-        icon = Icons.Default.Palette,
-        accent = Color(0xFF1F7A63),
-        pills = listOf("tokens", "theme", "components"),
-    ),
-    Navigation(
-        title = "Navigation",
-        summary = "Route contracts and shell-level flow boundaries that keep the foundation generic.",
-        icon = Icons.Default.Route,
-        accent = Color(0xFFE58E26),
-        pills = listOf("routes", "shell", "handoff"),
-    ),
-    Permissions(
-        title = "Permissions",
-        summary = "Reusable wrappers around system capabilities such as camera, notifications, and location.",
-        icon = Icons.Default.Security,
-        accent = Color(0xFF28356E),
-        pills = listOf("camera", "notifications", "location"),
-    ),
-    Storage(
-        title = "Storage",
-        summary = "Shared persistence primitives for cache, preferences, and local state hydration.",
-        icon = Icons.Default.Dataset,
-        accent = Color(0xFF6F4E9C),
-        pills = listOf("prefs", "cache", "hydration"),
-    ),
-    Debug(
-        title = "Debug Tools",
-        summary = "Diagnostics, fake data, environment switches, and visibility tools for platform teams.",
-        icon = Icons.Default.BugReport,
-        accent = Color(0xFF8A2D3B),
-        pills = listOf("logs", "flags", "mock data"),
-    ),
-}
+import com.example.mobilefoundation.core.debug.DebugPanel
+import com.example.mobilefoundation.core.designsystem.DesignToken
+import com.example.mobilefoundation.core.designsystem.FoundationTheme
+import com.example.mobilefoundation.core.navigation.NavigationRoute
+import com.example.mobilefoundation.core.networking.NetworkingPreview
+import com.example.mobilefoundation.core.networking.RequestDescriptor
+import com.example.mobilefoundation.core.observability.LogSignal
+import com.example.mobilefoundation.core.observability.ObservabilityPreview
+import com.example.mobilefoundation.core.permissions.PermissionKind
+import com.example.mobilefoundation.core.runtime.FoundationRuntime
+import com.example.mobilefoundation.core.storage.StoragePreview
 
 @Composable
 fun FoundationApp() {
-    var selectedDemo by remember { mutableStateOf<DemoDestination?>(null) }
+    var selectedRoute by remember { mutableStateOf<NavigationRoute?>(null) }
 
     FoundationTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Scaffold(
                 topBar = {
                     FoundationTopBar(
-                        selectedDemo = selectedDemo,
-                        onBack = { selectedDemo = null },
+                        selectedRoute = selectedRoute,
+                        onBack = { selectedRoute = null },
                     )
                 },
             ) { innerPadding ->
-                if (selectedDemo == null) {
-                    FoundationHome(contentPadding = innerPadding, onOpenDemo = { selectedDemo = it })
+                if (selectedRoute == null) {
+                    FoundationHome(
+                        contentPadding = innerPadding,
+                        onOpenRoute = { selectedRoute = it },
+                    )
                 } else {
                     DemoDetailScreen(
                         contentPadding = innerPadding,
-                        destination = checkNotNull(selectedDemo),
+                        route = checkNotNull(selectedRoute),
                     )
                 }
             }
@@ -124,18 +94,18 @@ fun FoundationApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FoundationTopBar(
-    selectedDemo: DemoDestination?,
+    selectedRoute: NavigationRoute?,
     onBack: () -> Unit,
 ) {
     TopAppBar(
         title = {
             Text(
-                text = selectedDemo?.title ?: "Mobile Foundation",
+                text = selectedRoute?.title ?: "Mobile Foundation",
                 fontWeight = FontWeight.SemiBold,
             )
         },
         navigationIcon = {
-            if (selectedDemo != null) {
+            if (selectedRoute != null) {
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp)
@@ -156,7 +126,7 @@ private fun FoundationTopBar(
 @Composable
 private fun FoundationHome(
     contentPadding: PaddingValues,
-    onOpenDemo: (DemoDestination) -> Unit,
+    onOpenRoute: (NavigationRoute) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -189,16 +159,16 @@ private fun FoundationHome(
             ExplanationCard()
         }
 
-        items(DemoDestination.entries.toList()) { destination ->
+        items(NavigationRoute.entries.toList()) { route ->
             DemoCard(
-                destination = destination,
-                onClick = { onOpenDemo(destination) },
+                route = route,
+                onClick = { onOpenRoute(route) },
             )
         }
 
         item {
             Text(
-                text = "Open any card to inspect what belongs in the public repo before private product apps such as Bokmoo add business modules on top.",
+                text = "Environment: ${FoundationRuntime.defaultEnvironment.name}. Open any card to inspect what belongs in the public repo before Bokmoo or any other private app adds business modules on top.",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
             )
@@ -237,14 +207,14 @@ private fun ExplanationCard() {
 
 @Composable
 private fun DemoCard(
-    destination: DemoDestination,
+    route: NavigationRoute,
     onClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = destination.accent),
+        colors = CardDefaults.cardColors(containerColor = routeAccent(route)),
         shape = MaterialTheme.shapes.extraLarge,
     ) {
         Column(
@@ -259,8 +229,8 @@ private fun DemoCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = destination.icon,
-                        contentDescription = destination.title,
+                        imageVector = routeIcon(route),
+                        contentDescription = route.title,
                         tint = Color.White,
                         modifier = Modifier.size(22.dp),
                     )
@@ -268,20 +238,20 @@ private fun DemoCard(
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = destination.title,
+                        text = route.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = destination.summary,
+                        text = route.summary,
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.88f),
                     )
                 }
             }
 
-            PillRow(labels = destination.pills, dark = true)
+            PillRow(labels = route.pills, dark = true)
 
             Text(
                 text = "Open demo",
@@ -295,7 +265,7 @@ private fun DemoCard(
 @Composable
 private fun DemoDetailScreen(
     contentPadding: PaddingValues,
-    destination: DemoDestination,
+    route: NavigationRoute,
 ) {
     Column(
         modifier = Modifier
@@ -306,29 +276,31 @@ private fun DemoDetailScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Text(
-            text = destination.summary,
+            text = route.summary,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
         )
 
         CapabilityShowcase(
             title = "What The Foundation Owns",
-            accent = destination.accent,
-            items = detailOwnedItems(destination),
+            accent = routeAccent(route),
+            items = detailOwnedItems(route),
         )
 
         CapabilityShowcase(
             title = "What Private Product Apps Add",
             accent = Color.Black.copy(alpha = 0.74f),
-            items = detailPrivateItems(destination),
+            items = detailPrivateItems(route),
         )
 
-        when (destination) {
-            DemoDestination.DesignSystem -> TokenShowcase()
-            DemoDestination.Navigation -> RouteShowcase()
-            DemoDestination.Permissions -> PermissionShowcase()
-            DemoDestination.Storage -> StorageShowcase()
-            DemoDestination.Debug -> DebugShowcase()
+        when (route) {
+            NavigationRoute.DesignSystem -> TokenShowcase()
+            NavigationRoute.Navigation -> RouteShowcase()
+            NavigationRoute.Permissions -> PermissionShowcase()
+            NavigationRoute.Storage -> StorageShowcase()
+            NavigationRoute.Networking -> NetworkingShowcase()
+            NavigationRoute.Observability -> ObservabilityShowcase()
+            NavigationRoute.Debug -> DebugShowcase()
         }
     }
 }
@@ -352,6 +324,7 @@ private fun CapabilityShowcase(
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
             )
+
             items.forEach { item ->
                 Pill(label = item, dark = true)
             }
@@ -363,9 +336,9 @@ private fun CapabilityShowcase(
 private fun TokenShowcase() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Token Snapshot", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        SwatchRow("Surface", Color(0xFFFAF7F0))
-        SwatchRow("Primary", Color(0xFF1F7A63))
-        SwatchRow("Accent", Color(0xFFE58E26))
+        DesignToken.swatches.forEach { swatch ->
+            SwatchRow(swatch.label, swatch.color)
+        }
         Text(
             text = "These values come from the public token source and should stay brand-neutral enough to reuse across private apps.",
             style = MaterialTheme.typography.labelLarge,
@@ -378,7 +351,7 @@ private fun TokenShowcase() {
 private fun RouteShowcase() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Route Contracts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        PillRow(labels = listOf("demo/list", "demo/detail", "debug/home"), dark = false)
+        PillRow(labels = NavigationRoute.entries.take(4).map { it.path }, dark = false)
         Text(
             text = "The foundation can define shell-level route contracts. Bokmoo or any private app should plug real feature flows into those contracts rather than hard-code business routes here.",
             style = MaterialTheme.typography.labelLarge,
@@ -391,9 +364,13 @@ private fun RouteShowcase() {
 private fun PermissionShowcase() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Permission States", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        PermissionRow("Camera", "Not requested yet", Color(0xFF1F7A63))
-        PermissionRow("Notifications", "Wrapper available", Color(0xFFE58E26))
-        PermissionRow("Location", "Explain before asking", Color(0xFF28356E))
+        PermissionKind.entries.forEach { permission ->
+            PermissionRow(
+                label = permission.label,
+                status = permission.detail,
+                tint = routeAccent(NavigationRoute.Permissions),
+            )
+        }
     }
 }
 
@@ -401,7 +378,7 @@ private fun PermissionShowcase() {
 private fun StorageShowcase() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Storage Layers", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        PillRow(labels = listOf("preferences", "secure token store", "offline cache"), dark = false)
+        PillRow(labels = StoragePreview.namespaces, dark = false)
         Text(
             text = "The public repo owns generic storage primitives. Private apps own real keys, domain models, and retention policy.",
             style = MaterialTheme.typography.labelLarge,
@@ -411,12 +388,32 @@ private fun StorageShowcase() {
 }
 
 @Composable
+private fun NetworkingShowcase() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Request Contracts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        NetworkingPreview.descriptors.forEach { descriptor ->
+            RequestCard(descriptor)
+        }
+    }
+}
+
+@Composable
+private fun ObservabilityShowcase() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Signal Contracts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        ObservabilityPreview.signals.forEach { signal ->
+            SignalCard(signal)
+        }
+    }
+}
+
+@Composable
 private fun DebugShowcase() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Debug Surface", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        DebugFlag("Mock data mode", "Enabled for demo")
-        DebugFlag("Verbose logging", "Available in debug builds")
-        DebugFlag("Environment switcher", "Public shell only")
+        DebugPanel.tools.forEach { tool ->
+            DebugFlag(tool.title, tool.detail)
+        }
     }
 }
 
@@ -471,6 +468,40 @@ private fun DebugFlag(
 }
 
 @Composable
+private fun RequestCard(descriptor: RequestDescriptor) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.7f)),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "${descriptor.method} ${descriptor.path}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = if (descriptor.requiresAuth) "requires downstream auth adapter" else "safe for public demo flows",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.64f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SignalCard(signal: LogSignal) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.7f)),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = signal.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(text = signal.detail, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.64f))
+        }
+    }
+}
+
+@Composable
 private fun PillRow(
     labels: List<String>,
     dark: Boolean,
@@ -499,20 +530,44 @@ private fun Pill(
     )
 }
 
-private fun detailOwnedItems(destination: DemoDestination): List<String> = when (destination) {
-    DemoDestination.DesignSystem -> listOf("shared colors", "radius scale", "typography tokens", "base components")
-    DemoDestination.Navigation -> listOf("route names", "shell entrypoints", "demo flow scaffolding")
-    DemoDestination.Permissions -> listOf("request wrappers", "educational copy patterns", "result normalization")
-    DemoDestination.Storage -> listOf("key-value adapters", "cache boundaries", "generic persistence APIs")
-    DemoDestination.Debug -> listOf("debug menu", "fake data hooks", "verbose diagnostics")
+private fun detailOwnedItems(route: NavigationRoute): List<String> = when (route) {
+    NavigationRoute.DesignSystem -> listOf("shared colors", "radius scale", "typography tokens", "base components")
+    NavigationRoute.Navigation -> listOf("route names", "shell entrypoints", "demo flow scaffolding")
+    NavigationRoute.Permissions -> listOf("request wrappers", "educational copy patterns", "result normalization")
+    NavigationRoute.Storage -> listOf("key-value adapters", "cache boundaries", "generic persistence APIs")
+    NavigationRoute.Networking -> listOf("request descriptors", "auth hooks", "mock transport boundaries")
+    NavigationRoute.Observability -> listOf("logger contract", "signal naming", "breadcrumbs")
+    NavigationRoute.Debug -> listOf("debug menu", "fake data hooks", "verbose diagnostics")
 }
 
-private fun detailPrivateItems(destination: DemoDestination): List<String> = when (destination) {
-    DemoDestination.DesignSystem -> listOf("Bokmoo brand styling", "marketing art", "campaign visuals")
-    DemoDestination.Navigation -> listOf("checkout flow", "account flow", "private deep links")
-    DemoDestination.Permissions -> listOf("business prompts", "feature-specific timing", "conversion copy")
-    DemoDestination.Storage -> listOf("real models", "sensitive schemas", "retention policy")
-    DemoDestination.Debug -> listOf("tenant-only flags", "private APIs", "ops credentials")
+private fun detailPrivateItems(route: NavigationRoute): List<String> = when (route) {
+    NavigationRoute.DesignSystem -> listOf("Bokmoo brand styling", "marketing art", "campaign visuals")
+    NavigationRoute.Navigation -> listOf("checkout flow", "account flow", "private deep links")
+    NavigationRoute.Permissions -> listOf("business prompts", "feature-specific timing", "conversion copy")
+    NavigationRoute.Storage -> listOf("real models", "sensitive schemas", "retention policy")
+    NavigationRoute.Networking -> listOf("real endpoints", "tenant auth", "domain error mapping")
+    NavigationRoute.Observability -> listOf("vendor config", "private event schema", "ops dashboards")
+    NavigationRoute.Debug -> listOf("tenant-only flags", "private APIs", "ops credentials")
+}
+
+private fun routeIcon(route: NavigationRoute): ImageVector = when (route) {
+    NavigationRoute.DesignSystem -> Icons.Default.Palette
+    NavigationRoute.Navigation -> Icons.Default.Route
+    NavigationRoute.Permissions -> Icons.Default.Security
+    NavigationRoute.Storage -> Icons.Default.Dataset
+    NavigationRoute.Networking -> Icons.Default.Language
+    NavigationRoute.Observability -> Icons.Default.BugReport
+    NavigationRoute.Debug -> Icons.Default.BugReport
+}
+
+private fun routeAccent(route: NavigationRoute): Color = when (route) {
+    NavigationRoute.DesignSystem -> DesignToken.primary
+    NavigationRoute.Navigation -> DesignToken.accent
+    NavigationRoute.Permissions -> DesignToken.tertiary
+    NavigationRoute.Storage -> Color(0xFF6F4E9C)
+    NavigationRoute.Networking -> Color(0xFF23608D)
+    NavigationRoute.Observability -> Color(0xFF6A3B1A)
+    NavigationRoute.Debug -> Color(0xFF8A2D3B)
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFAF7F0, showSystemUi = true, widthDp = 390, heightDp = 844)
@@ -527,7 +582,7 @@ private fun FoundationDetailPreview() {
     FoundationTheme {
         DemoDetailScreen(
             contentPadding = PaddingValues(),
-            destination = DemoDestination.DesignSystem,
+            route = NavigationRoute.DesignSystem,
         )
     }
 }

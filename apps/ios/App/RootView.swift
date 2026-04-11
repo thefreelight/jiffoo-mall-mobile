@@ -1,10 +1,15 @@
 #if canImport(SwiftUI)
 import AppShell
+import DebugTools
 import DesignSystem
 import Navigation
+import Networking
+import Observability
 import Permissions
+import Storage
 import SwiftUI
 
+@MainActor
 struct RootView: View {
     var body: some View {
         NavigationStack {
@@ -28,14 +33,14 @@ struct RootView: View {
                         .buttonStyle(.plain)
                     }
 
-                    Text("Open any card to inspect what belongs in the public repo before Bokmoo or any other private app adds real business features.")
+                    Text("Environment: \(AppShell.environmentName). Open any card to inspect what belongs in the public repo before Bokmoo or any other private app adds real business features.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 .padding(24)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(red: 0.98, green: 0.97, blue: 0.94))
+            .background(DesignToken.surface)
             .navigationTitle("Mobile Foundation")
             .navigationDestination(for: NavigationRoute.self) { route in
                 DemoDetailView(route: route)
@@ -62,13 +67,23 @@ struct RootView: View {
 
     private func galleryCard(route: NavigationRoute) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(route.title)
-                .font(.headline)
-                .foregroundStyle(.white)
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: iconName(for: route))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(10)
+                    .background(.black.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            Text(route.summary)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.88))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(route.title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+
+                    Text(route.summary)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.88))
+                }
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(route.pills, id: \.self) { item in
@@ -88,11 +103,25 @@ struct RootView: View {
 
     private func tint(for route: NavigationRoute) -> Color {
         switch route {
-        case .designSystem: return Color(red: 0.12, green: 0.48, blue: 0.39)
-        case .navigation: return Color(red: 0.90, green: 0.56, blue: 0.15)
-        case .permissions: return Color(red: 0.15, green: 0.21, blue: 0.42)
+        case .designSystem: return DesignToken.primary
+        case .navigation: return DesignToken.accent
+        case .permissions: return DesignToken.tertiary
         case .storage: return Color(red: 0.43, green: 0.31, blue: 0.61)
+        case .networking: return Color(red: 0.14, green: 0.38, blue: 0.55)
+        case .observability: return Color(red: 0.42, green: 0.23, blue: 0.10)
         case .debug: return Color(red: 0.54, green: 0.18, blue: 0.23)
+        }
+    }
+
+    private func iconName(for route: NavigationRoute) -> String {
+        switch route {
+        case .designSystem: return "paintpalette.fill"
+        case .navigation: return "arrow.trianglehead.branch"
+        case .permissions: return "lock.shield.fill"
+        case .storage: return "externaldrive.fill"
+        case .networking: return "network"
+        case .observability: return "waveform.path.ecg"
+        case .debug: return "ladybug.fill"
         }
     }
 
@@ -107,6 +136,7 @@ struct RootView: View {
     }
 }
 
+@MainActor
 private struct DemoDetailView: View {
     let route: NavigationRoute
 
@@ -133,7 +163,7 @@ private struct DemoDetailView: View {
             }
             .padding(24)
         }
-        .background(Color(red: 0.98, green: 0.97, blue: 0.94))
+        .background(DesignToken.surface)
         .navigationTitle(route.title)
     }
 
@@ -143,19 +173,20 @@ private struct DemoDetailView: View {
         case .designSystem:
             VStack(alignment: .leading, spacing: 12) {
                 Text("Token Snapshot").font(.headline)
-                swatch("Surface", color: Color(red: 0.98, green: 0.97, blue: 0.94))
-                swatch("Primary", color: Color(red: 0.12, green: 0.48, blue: 0.39))
-                swatch("Accent", color: Color(red: 0.90, green: 0.56, blue: 0.15))
+                ForEach(DesignToken.swatches, id: \.self) { swatch in
+                    swatchRow(swatch)
+                }
                 Text("Corner radius token: \(Int(DesignToken.cornerRadius))")
                     .font(.footnote.monospaced())
                     .foregroundStyle(.secondary)
             }
         case .navigation:
             VStack(alignment: .leading, spacing: 12) {
+                let previewRoutes = Array(NavigationRoute.allCases.prefix(4))
                 Text("Route Contracts").font(.headline)
-                pill("demo/list", dark: false)
-                pill("demo/detail", dark: false)
-                pill("debug/home", dark: false)
+                ForEach(previewRoutes.indices, id: \.self) { index in
+                    pill(previewRoutes[index].path, dark: false)
+                }
                 Text("The foundation can define shell routes. Bokmoo should plug real feature flows into those contracts rather than hard-code business routes here.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -163,26 +194,40 @@ private struct DemoDetailView: View {
         case .permissions:
             VStack(alignment: .leading, spacing: 12) {
                 Text("Permission Wrappers").font(.headline)
-                permissionRow("Camera", detail: "Not requested yet")
-                permissionRow("Notifications", detail: "Wrapper available")
-                permissionRow("Location", detail: "Explain before asking")
+                ForEach(PermissionKind.allCases, id: \.self) { permission in
+                    permissionRow(permission.rawValue, detail: permission.detail)
+                }
             }
         case .storage:
             VStack(alignment: .leading, spacing: 12) {
                 Text("Storage Layers").font(.headline)
-                pill("preferences", dark: false)
-                pill("secure token store", dark: false)
-                pill("offline cache", dark: false)
+                ForEach(StoragePreview.namespaces, id: \.self) { namespace in
+                    pill(namespace, dark: false)
+                }
                 Text("The public repo owns generic storage primitives. Private apps own the real keys, models, and retention policy.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+        case .networking:
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Request Contracts").font(.headline)
+                ForEach(NetworkingPreview.descriptors, id: \.self) { descriptor in
+                    requestCard(descriptor)
+                }
+            }
+        case .observability:
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Signal Contracts").font(.headline)
+                ForEach(ObservabilityPreview.signals, id: \.self) { signal in
+                    signalCard(signal)
+                }
+            }
         case .debug:
             VStack(alignment: .leading, spacing: 12) {
                 Text("Debug Surface").font(.headline)
-                debugCard("Mock data mode", detail: "Enabled for demo")
-                debugCard("Verbose logging", detail: "Available in debug builds")
-                debugCard("Environment switcher", detail: "Public shell only")
+                ForEach(DebugPanel.tools, id: \.self) { tool in
+                    debugCard(tool)
+                }
             }
         }
     }
@@ -203,12 +248,12 @@ private struct DemoDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignToken.cornerRadius, style: .continuous))
     }
 
-    private func swatch(_ title: String, color: Color) -> some View {
+    private func swatchRow(_ swatch: TokenSwatch) -> some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 8)
-                .fill(color)
+                .fill(swatch.color)
                 .frame(width: 28, height: 28)
-            Text(title)
+            Text(swatch.name)
         }
     }
 
@@ -225,10 +270,34 @@ private struct DemoDetailView: View {
         }
     }
 
-    private func debugCard(_ title: String, detail: String) -> some View {
+    private func requestCard(_ descriptor: RequestDescriptor) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.body.weight(.semibold))
-            Text(detail).font(.footnote).foregroundStyle(.secondary)
+            Text("\(descriptor.method) \(descriptor.path)").font(.body.weight(.semibold))
+            Text(descriptor.requiresAuth ? "requires downstream auth adapter" : "safe for public demo flows")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func signalCard(_ signal: LogSignal) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(signal.name).font(.body.weight(.semibold))
+            Text(signal.detail).font(.footnote).foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func debugCard(_ tool: DebugTool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(tool.title).font(.body.weight(.semibold))
+            Text(tool.detail).font(.footnote).foregroundStyle(.secondary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -248,10 +317,12 @@ private struct DemoDetailView: View {
 
     private func tint(for route: NavigationRoute) -> Color {
         switch route {
-        case .designSystem: return Color(red: 0.12, green: 0.48, blue: 0.39)
-        case .navigation: return Color(red: 0.90, green: 0.56, blue: 0.15)
-        case .permissions: return Color(red: 0.15, green: 0.21, blue: 0.42)
+        case .designSystem: return DesignToken.primary
+        case .navigation: return DesignToken.accent
+        case .permissions: return DesignToken.tertiary
         case .storage: return Color(red: 0.43, green: 0.31, blue: 0.61)
+        case .networking: return Color(red: 0.14, green: 0.38, blue: 0.55)
+        case .observability: return Color(red: 0.42, green: 0.23, blue: 0.10)
         case .debug: return Color(red: 0.54, green: 0.18, blue: 0.23)
         }
     }
@@ -262,6 +333,8 @@ private struct DemoDetailView: View {
         case .navigation: return ["route names", "shell entrypoints", "demo flow scaffolding"]
         case .permissions: return ["request wrappers", "educational copy patterns", "result normalization"]
         case .storage: return ["key-value adapters", "cache boundaries", "generic persistence APIs"]
+        case .networking: return ["request descriptors", "auth hooks", "mock transport boundaries"]
+        case .observability: return ["logger contract", "signal naming", "breadcrumbs"]
         case .debug: return ["debug menu", "fake data hooks", "verbose diagnostics"]
         }
     }
@@ -272,6 +345,8 @@ private struct DemoDetailView: View {
         case .navigation: return ["checkout flow", "account flow", "private deep links"]
         case .permissions: return ["business prompts", "feature-specific timing", "conversion copy"]
         case .storage: return ["real models", "sensitive schemas", "retention policy"]
+        case .networking: return ["real endpoints", "tenant auth", "domain error mapping"]
+        case .observability: return ["vendor config", "private event schema", "ops dashboards"]
         case .debug: return ["tenant-only flags", "private APIs", "ops credentials"]
         }
     }

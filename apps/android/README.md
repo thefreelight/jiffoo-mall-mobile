@@ -19,6 +19,8 @@ This directory holds the public Android-native foundation scaffold.
 - `core/observability`: logging, metrics, and analytics interfaces
 - `core/debug`: developer-only switches, inspectors, and diagnostics
 
+These are now real Gradle library modules rather than documentation placeholders. The public host app depends on them directly.
+
 ## Build Files
 
 The Android host now ships with a runnable Gradle setup for the public demo shell.
@@ -29,6 +31,7 @@ The Android host now ships with a runnable Gradle setup for the public demo shel
 cd apps/android
 ./gradlew assembleDebug
 ./gradlew installDebug
+./gradlew :core:designsystem:assembleDebug
 ```
 
 If you do not have a connected device or emulator, the project can still be verified with `assembleDebug`.

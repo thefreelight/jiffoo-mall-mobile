@@ -10,14 +10,18 @@
 		0574F1868E662A3F7103F4FE /* FoundationPreviewApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DE9C9E1CA7D91DBA035352 /* FoundationPreviewApp.swift */; };
 		07D407F1A1FBC022448A8C1A /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = DB375122F3C31483E99A3FA3 /* Networking */; };
 		1C8C2CABF8D3E1C63E52433A /* DebugTools in Frameworks */ = {isa = PBXBuildFile; productRef = 6AA1F857002C7B41D955C42B /* DebugTools */; };
+		23428B5F8988605BC5F3EE3A /* DebugTools in Frameworks */ = {isa = PBXBuildFile; productRef = 04C22D2EAF23BD5DE4AE2FD7 /* DebugTools */; };
 		32D4D423102BAC27B4C9B4EA /* AppShell in Frameworks */ = {isa = PBXBuildFile; productRef = 9786C7B8CD35D9DE4660E0E2 /* AppShell */; };
 		3FD919C63CFD1F233EE1CBC8 /* Navigation in Frameworks */ = {isa = PBXBuildFile; productRef = F08838F5894D7C6F62FFEB09 /* Navigation */; };
+		40CE21B5FF6B4E409D77AB3B /* Networking in Frameworks */ = {isa = PBXBuildFile; productRef = CDF289D42B1B24D2F5BCE2D7 /* Networking */; };
 		4E0B9E7568A89E2F0375D7EA /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = F4A93BDA25946F179AB3CF5A /* DesignSystem */; };
+		5A93783142830AAC278E19A7 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 0999A58C45BBEF2D3316E5C9 /* Storage */; };
 		5D4C0FD5EC8AF8AB5843FBB2 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 26C629E5E91A9028E71D6386 /* DesignSystem */; };
 		6561F9B4A138DA526D18B512 /* Observability in Frameworks */ = {isa = PBXBuildFile; productRef = E9E1B9E7E3A4F7C42D3EDE6F /* Observability */; };
 		70AF8E59FF7D71BB026AB415 /* Permissions in Frameworks */ = {isa = PBXBuildFile; productRef = AAECD4DEB500AFC06165BA42 /* Permissions */; };
 		7172CEE21CB9A1DD8746279B /* FoundationHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E718FC3D8A8D10E51280F2BC /* FoundationHostApp.swift */; };
 		818F14C19A2C0EA548BDE67D /* Navigation in Frameworks */ = {isa = PBXBuildFile; productRef = 7627DDBC4724E573B8AA2090 /* Navigation */; };
+		89197A39454E7F2AEE342E9C /* Observability in Frameworks */ = {isa = PBXBuildFile; productRef = C31206F0A2AD367D169A96C2 /* Observability */; };
 		B17734AF5DD189234A03A4CB /* FoundationHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E718FC3D8A8D10E51280F2BC /* FoundationHostApp.swift */; };
 		C22DB9E1CA215990DD6B7DC9 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678D395D312C600F55D6C7A4 /* RootView.swift */; };
 		CA9ADECE6F42A5ADAED08B9D /* Permissions in Frameworks */ = {isa = PBXBuildFile; productRef = CB148FEC1ED98743AB099B6A /* Permissions */; };
@@ -69,6 +73,10 @@
 				5D4C0FD5EC8AF8AB5843FBB2 /* DesignSystem in Frameworks */,
 				818F14C19A2C0EA548BDE67D /* Navigation in Frameworks */,
 				CA9ADECE6F42A5ADAED08B9D /* Permissions in Frameworks */,
+				5A93783142830AAC278E19A7 /* Storage in Frameworks */,
+				40CE21B5FF6B4E409D77AB3B /* Networking in Frameworks */,
+				89197A39454E7F2AEE342E9C /* Observability in Frameworks */,
+				23428B5F8988605BC5F3EE3A /* DebugTools in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -174,6 +182,10 @@
 				26C629E5E91A9028E71D6386 /* DesignSystem */,
 				7627DDBC4724E573B8AA2090 /* Navigation */,
 				CB148FEC1ED98743AB099B6A /* Permissions */,
+				0999A58C45BBEF2D3316E5C9 /* Storage */,
+				CDF289D42B1B24D2F5BCE2D7 /* Networking */,
+				C31206F0A2AD367D169A96C2 /* Observability */,
+				04C22D2EAF23BD5DE4AE2FD7 /* DebugTools */,
 			);
 			productName = FoundationPreview;
 			productReference = C58A00F314773BAC8A78515A /* FoundationPreview.app */;
@@ -519,6 +531,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		04C22D2EAF23BD5DE4AE2FD7 /* DebugTools */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DebugTools;
+		};
+		0999A58C45BBEF2D3316E5C9 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Storage;
+		};
 		26C629E5E91A9028E71D6386 /* DesignSystem */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DesignSystem;
@@ -547,9 +567,17 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = Permissions;
 		};
+		C31206F0A2AD367D169A96C2 /* Observability */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Observability;
+		};
 		CB148FEC1ED98743AB099B6A /* Permissions */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Permissions;
+		};
+		CDF289D42B1B24D2F5BCE2D7 /* Networking */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Networking;
 		};
 		DB375122F3C31483E99A3FA3 /* Networking */ = {
 			isa = XCSwiftPackageProductDependency;

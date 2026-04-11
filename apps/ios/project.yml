@@ -82,5 +82,9 @@ targets:
       - package: DesignSystem
       - package: Navigation
       - package: Permissions
+      - package: Storage
+      - package: Networking
+      - package: Observability
+      - package: DebugTools
     scheme:
       testTargets: []

@@ -10,6 +10,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - A public native repo shape now exists for Android and iOS.
 - iOS has a generated Xcode host project and package-level smoke coverage.
 - Android now has a pinned runnable host build with a minimal public Compose demo surface.
+- Android `core/*` capabilities now exist as real Gradle library modules, and iOS gallery screens read from package-level contracts instead of host-only placeholder data.
 
 ## Milestones
 
@@ -52,6 +53,10 @@ Deliverables:
 Exit criteria:
 
 - downstream private apps can consume core capabilities rather than redefine them
+
+Status:
+
+- initial capability contracts are now reflected in code on both platforms
 
 ### Phase 4: Downstream consumption model
 
