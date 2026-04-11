@@ -18,6 +18,13 @@ Each platform should expose the same capability map, even if implementations dif
 - observability
 - debug tools
 
+Current storefront reference status:
+
+- `builtin-default` has a preview-only native adapter path in the public hosts
+- `quiet-curator` and `stellar-midnight` are still `planned` and currently resolve through explicit fallback
+- unsupported or limited themes must declare fallback behavior instead of failing silently
+- real storefront resolution still belongs to `/api/store/context` and `/api/themes/active` in core
+
 ## Source Documents
 
 - Spec: [packages/docs/spec/0001-mobile-foundation-spec.md](/Users/jordan/Projects/jiffoo-mall-mobile/packages/docs/spec/0001-mobile-foundation-spec.md)

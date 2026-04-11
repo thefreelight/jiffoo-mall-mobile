@@ -11,7 +11,11 @@ import SwiftUI
 
 @MainActor
 struct RootView: View {
+    @State private var requestedThemeSlug = "builtin-default"
+
     var body: some View {
+        let themeResolution = StorefrontPreviewData.resolveTheme(requestedThemeSlug)
+
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -24,6 +28,7 @@ struct RootView: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    storefrontBasicVersionCard(themeResolution: themeResolution)
                     explanationCard()
 
                     ForEach(NavigationRoute.allCases, id: \.self) { route in
@@ -46,6 +51,65 @@ struct RootView: View {
                 DemoDetailView(route: route)
             }
         }
+    }
+
+    private func storefrontBasicVersionCard(themeResolution: ThemeAdapterResolution) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Storefront Basic Version")
+                .font(.headline)
+
+            Text("This first mobile reference flow targets `builtin-default` and uses explicit fallback for non-baseline themes. Core commerce semantics stay the same either way.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+
+            Divider()
+
+            Text("Resolved from /api/store/context + /api/themes/active in production. This host currently uses preview contract data while the adapter pipeline is being wired.")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                pill("store: \(StorefrontPreviewData.context.storeName)", dark: false)
+                pill("requested: \(requestedThemeSlug)", dark: false)
+                pill("effective: \(themeResolution.effectiveThemeSlug)", dark: false)
+                pill("official status: \(themeResolution.officialStatus)", dark: false)
+            }
+
+            Text("Preview theme switch")
+                .font(.subheadline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(StorefrontPreviewData.officialThemes, id: \.self) { entry in
+                    Button {
+                        requestedThemeSlug = entry.slug
+                    } label: {
+                        pill(entry.slug, dark: false, selected: requestedThemeSlug == entry.slug)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if themeResolution.usesFallback {
+                fallbackNotice(themeResolution)
+            }
+
+            Text("Basic storefront flows")
+                .font(.subheadline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(StorefrontPreviewData.basicFlows, id: \.self) { flow in
+                    pill(flow, dark: false)
+                }
+            }
+
+            Text("Supported theme modes: \(StorefrontClientProfile.supportedThemeModes.joined(separator: ", "))")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: DesignToken.cornerRadius, style: .continuous))
     }
 
     private func explanationCard() -> some View {
@@ -101,6 +165,20 @@ struct RootView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignToken.cornerRadius, style: .continuous))
     }
 
+    private func fallbackNotice(_ resolution: ThemeAdapterResolution) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Fallback active")
+                .font(.subheadline.weight(.semibold))
+            Text(resolution.fallbackReason ?? "Theme fallback is active.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(red: 0.96, green: 0.90, blue: 0.78))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
     private func tint(for route: NavigationRoute) -> Color {
         switch route {
         case .designSystem: return DesignToken.primary
@@ -125,13 +203,13 @@ struct RootView: View {
         }
     }
 
-    private func pill(_ text: String, dark: Bool) -> some View {
+    private func pill(_ text: String, dark: Bool, selected: Bool = false) -> some View {
         Text(text)
             .font(.subheadline.weight(.medium))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(dark ? .white.opacity(0.16) : Color.black.opacity(0.08))
-            .foregroundStyle(dark ? .white : .primary)
+            .background(selected ? tint(for: .designSystem) : (dark ? .white.opacity(0.16) : Color.black.opacity(0.08)))
+            .foregroundStyle(dark || selected ? .white : .primary)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

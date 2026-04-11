@@ -12,6 +12,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - Android now has a pinned runnable host build with a minimal public Compose demo surface.
 - Android `core/*` capabilities now exist as real Gradle library modules, and iOS gallery screens read from package-level contracts instead of host-only placeholder data.
 - The first planned baseline release is now documented as `v0.0.1`, and release-readiness checks pass locally.
+- Both public hosts now expose a preview-only storefront basic version that proves `builtin-default` adapter selection and explicit fallback for not-yet-supported themes.
 
 ## Milestones
 
@@ -84,6 +85,19 @@ Exit criteria:
 
 - the foundation can be treated as a versioned platform product, not just a source repo
 
+### Phase 6: Storefront reference slice
+
+Deliverables:
+
+- preview-only `builtin-default` storefront adapter path on Android and iOS
+- explicit fallback UX for `planned`, `limited`, `experimental`, and `unsupported` themes
+- contract-aligned explanation of how `/api/store/context` and `/api/themes/active` feed real runtime resolution
+
+Exit criteria:
+
+- both public hosts can demonstrate theme adapter selection without inventing client-private commerce semantics
+- unsupported or not-yet-shipped themes never fail silently
+
 ## Delivery Checklist
 
 - [x] Finish Android runnable host instead of template-only Gradle files
@@ -95,6 +109,7 @@ Exit criteria:
 - [x] Define stability tiers for public modules
 - [x] Add compatibility lab checks for downstream consumers
 - [x] Define Android artifact and iOS package distribution plan
+- [x] Add a basic storefront reference slice with explicit theme fallback behavior
 
 ## Risks And Watchouts
 
@@ -112,6 +127,7 @@ The Linear rollout should track at least these workstreams:
 - downstream sync strategy
 - docs and contribution guardrails
 - release engineering and compatibility validation
+- storefront adapter selection and fallback behavior
 
 ## Current Linear Mapping
 

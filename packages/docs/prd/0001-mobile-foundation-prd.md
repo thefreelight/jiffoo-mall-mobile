@@ -22,6 +22,8 @@ It should make new apps feel like:
 - connect private contracts and configuration
 - ship on top of a stable native base
 
+It should also give new teams one concrete public reference for how a storefront client resolves the active store, selects a theme adapter, and falls back safely when support is not available yet.
+
 ## Product Principles
 
 - Native first: Kotlin for Android and Swift for iOS.
@@ -39,6 +41,7 @@ It should make new apps feel like:
 - Enable downstream apps such as `bokmoo-app` to consume the foundation through a repeatable sync model.
 - Make the foundation safe for open-source consumers to adopt and upgrade over time.
 - Make release-unit names and adoption paths explicit enough that consumers do not need to learn the repository internals first.
+- Demonstrate a basic `builtin-default` storefront reference flow before any private app introduces product-specific adapters.
 
 ## In Scope
 
@@ -46,6 +49,7 @@ It should make new apps feel like:
 - reusable capability modules
 - shared design tokens and public assets
 - debug and demo surfaces
+- a minimal storefront reference slice for the official default theme
 - architecture docs, ADRs, specs, and release notes
 - templates and CI guardrails
 - release tiers, versioning policy, and compatibility validation

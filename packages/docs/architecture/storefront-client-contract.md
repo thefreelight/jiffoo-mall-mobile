@@ -96,6 +96,19 @@ This profile is intentionally lightweight. It describes:
 
 It does not duplicate real API schemas or DTOs. The core repository remains responsible for those.
 
+## Current Preview Implementation
+
+The current public mobile hosts expose a preview-only basic storefront slice so maintainers and downstream teams can see the contract boundary in action before private business modules are added.
+
+Current behavior:
+
+- `builtin-default` resolves to the first in-host native adapter preview path
+- `quiet-curator` and `stellar-midnight` stay in `planned` status and currently fall back explicitly
+- `limited`, `experimental`, and `unsupported` themes must show a declared fallback instead of failing silently
+- production clients must still resolve store and active theme through `/api/store/context` and `/api/themes/active`
+
+The preview host is intentionally conservative. It proves adapter selection and fallback behavior without claiming broader theme support than the core inventory has actually granted.
+
 ## Downstream Rule
 
 Downstream private mobile apps should:

@@ -16,6 +16,7 @@ It exists to provide a reusable Android and iOS foundation that can be consumed 
 - Standardize repository shape for future private consumer apps.
 - Centralize public design tokens, public assets, templates, and architecture guidance.
 - Define a release and upgrade model suitable for open-source consumers.
+- Provide a minimal storefront reference slice that proves native adapter selection and explicit fallback without forking core commerce semantics.
 - Define stable capability areas shared across native apps:
   - app shell
   - navigation
@@ -96,6 +97,7 @@ Allowed in this repository:
 - generic shells
 - demo screens
 - fake data and previews
+- storefront reference previews that consume only documented core contract assumptions
 - public design tokens
 - reusable UI foundations
 - generic platform wrappers
@@ -148,6 +150,7 @@ Before a release is considered ready:
 
 - Android host builds must pass
 - iOS host builds must pass
+- baseline storefront adapter selection and fallback checks must pass on the public hosts
 - sample consumer integration checks must pass for stable modules
 - migration notes must exist for downstream-impacting changes
 

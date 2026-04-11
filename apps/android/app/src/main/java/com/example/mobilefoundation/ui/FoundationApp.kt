@@ -59,11 +59,18 @@ import com.example.mobilefoundation.core.observability.LogSignal
 import com.example.mobilefoundation.core.observability.ObservabilityPreview
 import com.example.mobilefoundation.core.permissions.PermissionKind
 import com.example.mobilefoundation.core.runtime.FoundationRuntime
+import com.example.mobilefoundation.core.runtime.StorefrontClientProfile
+import com.example.mobilefoundation.core.runtime.StorefrontPreviewData
+import com.example.mobilefoundation.core.runtime.ThemeAdapterResolution
 import com.example.mobilefoundation.core.storage.StoragePreview
 
 @Composable
 fun FoundationApp() {
     var selectedRoute by remember { mutableStateOf<NavigationRoute?>(null) }
+    var requestedThemeSlug by remember { mutableStateOf("builtin-default") }
+    val themeResolution = remember(requestedThemeSlug) {
+        StorefrontPreviewData.resolveTheme(requestedThemeSlug)
+    }
 
     FoundationTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -79,6 +86,9 @@ fun FoundationApp() {
                     FoundationHome(
                         contentPadding = innerPadding,
                         onOpenRoute = { selectedRoute = it },
+                        requestedThemeSlug = requestedThemeSlug,
+                        onThemeSelected = { requestedThemeSlug = it },
+                        themeResolution = themeResolution,
                     )
                 } else {
                     DemoDetailScreen(
@@ -127,6 +137,9 @@ private fun FoundationTopBar(
 private fun FoundationHome(
     contentPadding: PaddingValues,
     onOpenRoute: (NavigationRoute) -> Unit,
+    requestedThemeSlug: String,
+    onThemeSelected: (String) -> Unit,
+    themeResolution: ThemeAdapterResolution,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -156,6 +169,14 @@ private fun FoundationHome(
         }
 
         item {
+            StorefrontBasicVersionCard(
+                requestedThemeSlug = requestedThemeSlug,
+                onThemeSelected = onThemeSelected,
+                themeResolution = themeResolution,
+            )
+        }
+
+        item {
             ExplanationCard()
         }
 
@@ -171,6 +192,87 @@ private fun FoundationHome(
                 text = "Environment: ${FoundationRuntime.defaultEnvironment.name}. Open any card to inspect what belongs in the public repo before Bokmoo or any other private app adds business modules on top.",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StorefrontBasicVersionCard(
+    requestedThemeSlug: String,
+    onThemeSelected: (String) -> Unit,
+    themeResolution: ThemeAdapterResolution,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.78f)),
+        shape = MaterialTheme.shapes.extraLarge,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Storefront Basic Version",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            Text(
+                text = "This first mobile reference flow targets `builtin-default` and uses explicit fallback for non-baseline themes. Core commerce semantics stay the same either way.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+            Text(
+                text = "Resolved from /api/store/context + /api/themes/active in production. This host currently uses preview contract data while the adapter pipeline is being wired.",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            )
+
+            PillRow(
+                labels = listOf(
+                    "store: ${StorefrontPreviewData.context.storeName}",
+                    "requested: $requestedThemeSlug",
+                    "effective: ${themeResolution.effectiveThemeSlug}",
+                    "official status: ${themeResolution.officialStatus}",
+                ),
+                dark = false,
+            )
+
+            Text(
+                text = "Preview theme switch",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            PillRow(
+                labels = StorefrontPreviewData.officialThemes.map { it.slug },
+                dark = false,
+                selectedLabel = requestedThemeSlug,
+                onSelect = onThemeSelected,
+            )
+
+            if (themeResolution.usesFallback) {
+                FallbackNotice(themeResolution)
+            }
+
+            Text(
+                text = "Basic storefront flows",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            PillRow(
+                labels = StorefrontPreviewData.basicFlows,
+                dark = false,
+            )
+
+            Text(
+                text = "Supported theme modes: ${StorefrontClientProfile.supportedThemeModes.joinToString()}",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
         }
     }
@@ -200,6 +302,30 @@ private fun ExplanationCard() {
                 text = "Click a capability card below to preview what the foundation owns and what should stay out of private business code.",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FallbackNotice(resolution: ThemeAdapterResolution) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6E6C6)),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = "Fallback active",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = resolution.fallbackReason ?: "Theme fallback is active.",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
             )
         }
     }
@@ -505,10 +631,17 @@ private fun SignalCard(signal: LogSignal) {
 private fun PillRow(
     labels: List<String>,
     dark: Boolean,
+    selectedLabel: String? = null,
+    onSelect: ((String) -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         labels.forEach { label ->
-            Pill(label = label, dark = dark)
+            Pill(
+                label = label,
+                dark = dark,
+                selected = selectedLabel == label,
+                onClick = { onSelect?.invoke(label) },
+            )
         }
     }
 }
@@ -517,11 +650,17 @@ private fun PillRow(
 private fun Pill(
     label: String,
     dark: Boolean,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
-    val background = if (dark) Color.Black.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (dark) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val background = when {
+        selected -> routeAccent(NavigationRoute.DesignSystem).copy(alpha = if (dark) 0.9f else 0.2f)
+        dark -> Color.Black.copy(alpha = 0.18f)
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val textColor = if (dark || selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     AssistChip(
-        onClick = {},
+        onClick = { onClick?.invoke() },
         label = { Text(label) },
         colors = AssistChipDefaults.assistChipColors(
             containerColor = background,
