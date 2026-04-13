@@ -25,6 +25,7 @@ Current storefront reference status:
 - Android and iOS hosts can also render a read-only catalog/product-detail reference slice from the public core commerce contract
 - Android and iOS hosts can also demonstrate category discovery and search without introducing cart or checkout mutations yet
 - Android and iOS hosts can now exercise minimal cart read/add/remove flows with an explicit auth-token bridge and preview fallback
+- Android and iOS hosts can now expose a minimal checkout-entry slice with payment method discovery and order-draft creation
 - `quiet-curator` and `stellar-midnight` are still `planned` and currently resolve through explicit fallback
 - unsupported or limited themes must declare fallback behavior instead of failing silently
 - real storefront resolution still belongs to `/api/store/context` and `/api/themes/active` in core

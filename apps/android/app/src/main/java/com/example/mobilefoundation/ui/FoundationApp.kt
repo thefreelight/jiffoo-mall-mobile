@@ -69,7 +69,10 @@ import com.example.mobilefoundation.core.networking.StorefrontContractClient
 import com.example.mobilefoundation.core.networking.StorefrontContractSnapshot
 import com.example.mobilefoundation.core.networking.StorefrontProductDetail
 import com.example.mobilefoundation.core.networking.StorefrontProductListItem
+import com.example.mobilefoundation.core.networking.StorefrontPaymentMethod
 import com.example.mobilefoundation.core.observability.LogSignal
+import com.example.mobilefoundation.core.networking.StorefrontCheckoutPreviewData
+import com.example.mobilefoundation.core.networking.StorefrontOrderSummary
 import com.example.mobilefoundation.core.observability.ObservabilityPreview
 import com.example.mobilefoundation.core.permissions.PermissionKind
 import com.example.mobilefoundation.core.runtime.FoundationRuntime
@@ -106,6 +109,14 @@ fun FoundationApp() {
     var isLoadingCart by remember { mutableStateOf(false) }
     var previewCart by remember { mutableStateOf(StorefrontCartPreviewData.emptyCart()) }
     var isMutatingCart by remember { mutableStateOf(false) }
+    var livePaymentMethods by remember { mutableStateOf<List<StorefrontPaymentMethod>>(emptyList()) }
+    var livePaymentMethodsError by remember { mutableStateOf<String?>(null) }
+    var isLoadingPaymentMethods by remember { mutableStateOf(false) }
+    var selectedPaymentMethodSlug by remember { mutableStateOf(StorefrontCheckoutPreviewData.paymentMethods.first().pluginSlug) }
+    var liveOrderSummary by remember { mutableStateOf<StorefrontOrderSummary?>(null) }
+    var previewOrderSummary by remember { mutableStateOf<StorefrontOrderSummary?>(null) }
+    var checkoutError by remember { mutableStateOf<String?>(null) }
+    var isCreatingOrder by remember { mutableStateOf(false) }
     var selectedProductId by remember { mutableStateOf(StorefrontCatalogPreviewData.products.first().id) }
     var liveProductDetail by remember { mutableStateOf<StorefrontProductDetail?>(null) }
     var liveProductDetailError by remember { mutableStateOf<String?>(null) }
@@ -250,6 +261,30 @@ fun FoundationApp() {
         isLoadingCart = false
     }
 
+    LaunchedEffect(liveSnapshot?.baseUrl) {
+        livePaymentMethods = emptyList()
+        livePaymentMethodsError = null
+
+        val snapshot = liveSnapshot ?: return@LaunchedEffect
+        isLoadingPaymentMethods = true
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                StorefrontContractClient.fetchPaymentMethods(snapshot.baseUrl)
+            }
+        }.onSuccess { methods ->
+            livePaymentMethods = methods
+            val firstSlug = methods.firstOrNull()?.pluginSlug
+            if (firstSlug != null) {
+                selectedPaymentMethodSlug = firstSlug
+            }
+        }.onFailure { error ->
+            livePaymentMethodsError = error.message ?: "Unable to load payment methods from core."
+        }
+
+        isLoadingPaymentMethods = false
+    }
+
     val scope = rememberCoroutineScope()
 
     FoundationTheme {
@@ -332,6 +367,9 @@ fun FoundationApp() {
                                 } else {
                                     previewCart = StorefrontCartPreviewData.addProduct(previewCart, product)
                                 }
+                                previewOrderSummary = null
+                                liveOrderSummary = null
+                                checkoutError = null
                                 isMutatingCart = false
                             }
                         },
@@ -358,7 +396,52 @@ fun FoundationApp() {
                                 } else {
                                     previewCart = StorefrontCartPreviewData.removeItem(previewCart, itemId)
                                 }
+                                previewOrderSummary = null
+                                liveOrderSummary = null
+                                checkoutError = null
                                 isMutatingCart = false
+                            }
+                        },
+                        livePaymentMethods = livePaymentMethods,
+                        livePaymentMethodsError = livePaymentMethodsError,
+                        isLoadingPaymentMethods = isLoadingPaymentMethods,
+                        selectedPaymentMethodSlug = selectedPaymentMethodSlug,
+                        onPaymentMethodSelected = { selectedPaymentMethodSlug = it },
+                        liveOrderSummary = liveOrderSummary,
+                        previewOrderSummary = previewOrderSummary,
+                        checkoutError = checkoutError,
+                        isCreatingOrder = isCreatingOrder,
+                        onCreateOrder = {
+                            scope.launch {
+                                isCreatingOrder = true
+                                checkoutError = null
+                                val effectiveCart = liveCart ?: previewCart
+                                val canUseLiveOrder = liveSnapshot != null && appliedCartAccessToken.isNotBlank() && liveCart != null
+                                if (canUseLiveOrder) {
+                                    runCatching {
+                                        withContext(Dispatchers.IO) {
+                                            StorefrontContractClient.createOrder(
+                                                baseUrl = checkNotNull(liveSnapshot).baseUrl,
+                                                bearerToken = appliedCartAccessToken,
+                                                cart = effectiveCart,
+                                            )
+                                        }
+                                    }.onSuccess { order ->
+                                        liveOrderSummary = order
+                                        previewOrderSummary = null
+                                    }.onFailure { error ->
+                                        liveOrderSummary = null
+                                        previewOrderSummary = StorefrontCheckoutPreviewData.createOrderPreview(effectiveCart)
+                                        checkoutError = (error.message ?: "Unable to create live order.") + " Using preview order summary instead."
+                                    }
+                                } else {
+                                    previewOrderSummary = StorefrontCheckoutPreviewData.createOrderPreview(effectiveCart)
+                                    liveOrderSummary = null
+                                    if (appliedCartAccessToken.isBlank()) {
+                                        checkoutError = "Checkout create-order requires a shop access token, so the host is using preview order summary."
+                                    }
+                                }
+                                isCreatingOrder = false
                             }
                         },
                         previewThemeSlug = previewThemeSlug,
@@ -448,6 +531,16 @@ private fun FoundationHome(
     isMutatingCart: Boolean,
     onAddSelectedProductToCart: () -> Unit,
     onRemoveCartItem: (String) -> Unit,
+    livePaymentMethods: List<StorefrontPaymentMethod>,
+    livePaymentMethodsError: String?,
+    isLoadingPaymentMethods: Boolean,
+    selectedPaymentMethodSlug: String,
+    onPaymentMethodSelected: (String) -> Unit,
+    liveOrderSummary: StorefrontOrderSummary?,
+    previewOrderSummary: StorefrontOrderSummary?,
+    checkoutError: String?,
+    isCreatingOrder: Boolean,
+    onCreateOrder: () -> Unit,
     previewThemeSlug: String,
     onPreviewThemeSelected: (String) -> Unit,
     previewResolution: ThemeAdapterResolution,
@@ -517,6 +610,16 @@ private fun FoundationHome(
                 isMutatingCart = isMutatingCart,
                 onAddSelectedProductToCart = onAddSelectedProductToCart,
                 onRemoveCartItem = onRemoveCartItem,
+                livePaymentMethods = livePaymentMethods,
+                livePaymentMethodsError = livePaymentMethodsError,
+                isLoadingPaymentMethods = isLoadingPaymentMethods,
+                selectedPaymentMethodSlug = selectedPaymentMethodSlug,
+                onPaymentMethodSelected = onPaymentMethodSelected,
+                liveOrderSummary = liveOrderSummary,
+                previewOrderSummary = previewOrderSummary,
+                checkoutError = checkoutError,
+                isCreatingOrder = isCreatingOrder,
+                onCreateOrder = onCreateOrder,
                 previewThemeSlug = previewThemeSlug,
                 onPreviewThemeSelected = onPreviewThemeSelected,
                 previewResolution = previewResolution,
@@ -582,6 +685,16 @@ private fun StorefrontBasicVersionCard(
     isMutatingCart: Boolean,
     onAddSelectedProductToCart: () -> Unit,
     onRemoveCartItem: (String) -> Unit,
+    livePaymentMethods: List<StorefrontPaymentMethod>,
+    livePaymentMethodsError: String?,
+    isLoadingPaymentMethods: Boolean,
+    selectedPaymentMethodSlug: String,
+    onPaymentMethodSelected: (String) -> Unit,
+    liveOrderSummary: StorefrontOrderSummary?,
+    previewOrderSummary: StorefrontOrderSummary?,
+    checkoutError: String?,
+    isCreatingOrder: Boolean,
+    onCreateOrder: () -> Unit,
     previewThemeSlug: String,
     onPreviewThemeSelected: (String) -> Unit,
     previewResolution: ThemeAdapterResolution,
@@ -759,6 +872,23 @@ private fun StorefrontBasicVersionCard(
                 isMutatingCart = isMutatingCart,
                 onAddSelectedProductToCart = onAddSelectedProductToCart,
                 onRemoveCartItem = onRemoveCartItem,
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+            CheckoutReferenceSection(
+                livePaymentMethods = livePaymentMethods,
+                livePaymentMethodsError = livePaymentMethodsError,
+                isLoadingPaymentMethods = isLoadingPaymentMethods,
+                selectedPaymentMethodSlug = selectedPaymentMethodSlug,
+                onPaymentMethodSelected = onPaymentMethodSelected,
+                liveCart = liveCart,
+                previewCart = previewCart,
+                liveOrderSummary = liveOrderSummary,
+                previewOrderSummary = previewOrderSummary,
+                checkoutError = checkoutError,
+                isCreatingOrder = isCreatingOrder,
+                onCreateOrder = onCreateOrder,
             )
         }
     }
@@ -1089,6 +1219,119 @@ private fun CartItemCard(
             )
             Button(onClick = onRemove, enabled = removeEnabled) {
                 Text("Remove item")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CheckoutReferenceSection(
+    livePaymentMethods: List<StorefrontPaymentMethod>,
+    livePaymentMethodsError: String?,
+    isLoadingPaymentMethods: Boolean,
+    selectedPaymentMethodSlug: String,
+    onPaymentMethodSelected: (String) -> Unit,
+    liveCart: StorefrontCartSnapshot?,
+    previewCart: StorefrontCartSnapshot,
+    liveOrderSummary: StorefrontOrderSummary?,
+    previewOrderSummary: StorefrontOrderSummary?,
+    checkoutError: String?,
+    isCreatingOrder: Boolean,
+    onCreateOrder: () -> Unit,
+) {
+    val effectiveCart = liveCart ?: previewCart
+    val paymentMethods = if (livePaymentMethods.isNotEmpty()) livePaymentMethods else StorefrontCheckoutPreviewData.paymentMethods
+    val effectiveOrder = liveOrderSummary ?: previewOrderSummary
+    val isUsingLivePayments = livePaymentMethods.isNotEmpty()
+
+    Text(
+        text = "Checkout entry",
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+    )
+
+    PillRow(
+        labels = listOf(
+            "payments source: ${if (isUsingLivePayments) "live core" else "preview fallback"}",
+            "selected method: $selectedPaymentMethodSlug",
+            "cart total: ${formatPrice(effectiveCart.total)}",
+            "items: ${effectiveCart.itemCount}",
+        ),
+        dark = false,
+    )
+
+    if (isLoadingPaymentMethods) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(
+                text = "Loading /api/payments/available-methods...",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+        }
+    }
+
+    if (!isUsingLivePayments && livePaymentMethodsError != null) {
+        StatusNotice(
+            title = "Payment methods fallback active",
+            message = livePaymentMethodsError,
+            accent = Color(0xFFF6E6C6),
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        paymentMethods.forEach { method ->
+            Pill(
+                label = method.displayName,
+                dark = false,
+                selected = selectedPaymentMethodSlug == method.pluginSlug,
+                onClick = { onPaymentMethodSelected(method.pluginSlug) },
+            )
+        }
+    }
+
+    Button(
+        onClick = onCreateOrder,
+        enabled = effectiveCart.items.isNotEmpty() && !isCreatingOrder,
+    ) {
+        Text(if (isCreatingOrder) "Creating order..." else "Create order draft")
+    }
+
+    if (checkoutError != null) {
+        StatusNotice(
+            title = "Checkout fallback active",
+            message = checkoutError,
+            accent = Color(0xFFF6E6C6),
+        )
+    }
+
+    if (effectiveOrder != null) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f)),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "Order summary",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                PillRow(
+                    labels = listOf(
+                        "order: ${effectiveOrder.id}",
+                        "status: ${effectiveOrder.status}",
+                        "payment: ${effectiveOrder.paymentStatus}",
+                        "total: ${formatPrice(effectiveOrder.totalAmount)}",
+                        "currency: ${effectiveOrder.currency}",
+                    ),
+                    dark = false,
+                )
             }
         }
     }

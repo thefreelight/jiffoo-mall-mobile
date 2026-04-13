@@ -33,6 +33,14 @@ struct RootView: View {
     @State private var isLoadingCart = false
     @State private var previewCart = StorefrontCartPreviewData.emptyCart()
     @State private var isMutatingCart = false
+    @State private var livePaymentMethods: [StorefrontPaymentMethod] = []
+    @State private var livePaymentMethodsError: String?
+    @State private var isLoadingPaymentMethods = false
+    @State private var selectedPaymentMethodSlug = StorefrontCheckoutPreviewData.paymentMethods.first?.pluginSlug ?? "stripe"
+    @State private var liveOrderSummary: StorefrontOrderSummary?
+    @State private var previewOrderSummary: StorefrontOrderSummary?
+    @State private var checkoutError: String?
+    @State private var isCreatingOrder = false
     @State private var selectedProductId = StorefrontCatalogPreviewData.products.first?.id ?? ""
     @State private var liveProductDetail: StorefrontProductDetail?
     @State private var liveProductDetailError: String?
@@ -94,6 +102,9 @@ struct RootView: View {
         }
         .task(id: "\(liveSnapshot?.baseUrl ?? "preview")-\(appliedCartAccessToken)") {
             await loadCart()
+        }
+        .task(id: liveSnapshot?.baseUrl) {
+            await loadPaymentMethods()
         }
     }
 
@@ -203,6 +214,10 @@ struct RootView: View {
             Divider()
 
             cartReferenceSection()
+
+            Divider()
+
+            checkoutReferenceSection()
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -345,6 +360,9 @@ struct RootView: View {
         }
 
         isMutatingCart = false
+        liveOrderSummary = nil
+        previewOrderSummary = nil
+        checkoutError = nil
     }
 
     private func removeCartItem(_ itemId: String) async {
@@ -368,6 +386,59 @@ struct RootView: View {
         }
 
         isMutatingCart = false
+        liveOrderSummary = nil
+        previewOrderSummary = nil
+        checkoutError = nil
+    }
+
+    private func loadPaymentMethods() async {
+        livePaymentMethods = []
+        livePaymentMethodsError = nil
+
+        guard let liveSnapshot else { return }
+
+        isLoadingPaymentMethods = true
+        do {
+            livePaymentMethods = try await StorefrontContractClient.fetchPaymentMethods(baseUrl: liveSnapshot.baseUrl)
+            if let first = livePaymentMethods.first?.pluginSlug {
+                selectedPaymentMethodSlug = first
+            }
+        } catch {
+            livePaymentMethodsError = error.localizedDescription
+        }
+        isLoadingPaymentMethods = false
+    }
+
+    private func createOrderDraft() async {
+        let effectiveCart = liveCart ?? previewCart
+        guard !effectiveCart.items.isEmpty else { return }
+
+        isCreatingOrder = true
+        checkoutError = nil
+        let canUseLiveOrder = liveSnapshot != nil && !appliedCartAccessToken.isEmpty && liveCart != nil
+
+        if canUseLiveOrder, let liveSnapshot {
+            do {
+                liveOrderSummary = try await StorefrontContractClient.createOrder(
+                    baseUrl: liveSnapshot.baseUrl,
+                    bearerToken: appliedCartAccessToken,
+                    cart: effectiveCart
+                )
+                previewOrderSummary = nil
+            } catch {
+                liveOrderSummary = nil
+                previewOrderSummary = StorefrontCheckoutPreviewData.createOrderPreview(cart: effectiveCart)
+                checkoutError = error.localizedDescription + " Using preview order summary instead."
+            }
+        } else {
+            previewOrderSummary = StorefrontCheckoutPreviewData.createOrderPreview(cart: effectiveCart)
+            liveOrderSummary = nil
+            if appliedCartAccessToken.isEmpty {
+                checkoutError = "Checkout create-order requires a shop access token, so the host is using preview order summary."
+            }
+        }
+
+        isCreatingOrder = false
     }
 
     private func explanationCard() -> some View {
@@ -571,6 +642,87 @@ struct RootView: View {
                         cartItemCard(item: item)
                     }
                 }
+            }
+        }
+    }
+
+    private func checkoutReferenceSection() -> some View {
+        let effectiveCart = liveCart ?? previewCart
+        let paymentMethods = livePaymentMethods.isEmpty ? StorefrontCheckoutPreviewData.paymentMethods : livePaymentMethods
+        let isUsingLivePayments = !livePaymentMethods.isEmpty
+        let effectiveOrder = liveOrderSummary ?? previewOrderSummary
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Checkout entry")
+                .font(.subheadline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                pill("payments source: \(isUsingLivePayments ? "live core" : "preview fallback")", dark: false)
+                pill("selected method: \(selectedPaymentMethodSlug)", dark: false)
+                pill("cart total: \(formatPrice(effectiveCart.total))", dark: false)
+                pill("items: \(effectiveCart.itemCount)", dark: false)
+            }
+
+            if isLoadingPaymentMethods {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading /api/payments/available-methods...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !isUsingLivePayments, let livePaymentMethodsError {
+                statusCard(
+                    title: "Payment methods fallback active",
+                    message: livePaymentMethodsError,
+                    accent: Color(red: 0.96, green: 0.90, blue: 0.78)
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(paymentMethods, id: \.pluginSlug) { method in
+                    Button {
+                        selectedPaymentMethodSlug = method.pluginSlug
+                    } label: {
+                        pill(method.displayName, dark: false, selected: selectedPaymentMethodSlug == method.pluginSlug)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Button(isCreatingOrder ? "Creating order..." : "Create order draft") {
+                Task {
+                    await createOrderDraft()
+                }
+            }
+            .disabled(effectiveCart.items.isEmpty || isCreatingOrder)
+
+            if let checkoutError {
+                statusCard(
+                    title: "Checkout fallback active",
+                    message: checkoutError,
+                    accent: Color(red: 0.96, green: 0.90, blue: 0.78)
+                )
+            }
+
+            if let effectiveOrder {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Order summary")
+                        .font(.subheadline.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 8) {
+                        pill("order: \(effectiveOrder.id)", dark: false)
+                        pill("status: \(effectiveOrder.status)", dark: false)
+                        pill("payment: \(effectiveOrder.paymentStatus)", dark: false)
+                        pill("total: \(formatPrice(effectiveOrder.totalAmount))", dark: false)
+                        pill("currency: \(effectiveOrder.currency)", dark: false)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.white.opacity(0.72))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
     }

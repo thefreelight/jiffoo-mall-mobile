@@ -193,6 +193,38 @@ public struct StorefrontCartSnapshot: Sendable, Hashable {
     }
 }
 
+public struct StorefrontPaymentMethod: Sendable, Hashable {
+    public let pluginSlug: String
+    public let displayName: String
+    public let supportedCurrencies: [String]
+    public let isLive: Bool
+
+    public init(pluginSlug: String, displayName: String, supportedCurrencies: [String], isLive: Bool) {
+        self.pluginSlug = pluginSlug
+        self.displayName = displayName
+        self.supportedCurrencies = supportedCurrencies
+        self.isLive = isLive
+    }
+}
+
+public struct StorefrontOrderSummary: Sendable, Hashable {
+    public let id: String
+    public let status: String
+    public let paymentStatus: String
+    public let totalAmount: Double
+    public let currency: String
+    public let itemCount: Int
+
+    public init(id: String, status: String, paymentStatus: String, totalAmount: Double, currency: String, itemCount: Int) {
+        self.id = id
+        self.status = status
+        self.paymentStatus = paymentStatus
+        self.totalAmount = totalAmount
+        self.currency = currency
+        self.itemCount = itemCount
+    }
+}
+
 public enum StorefrontCatalogPreviewData {
     public static let products: [StorefrontProductListItem] = [
         StorefrontProductListItem(
@@ -394,6 +426,38 @@ public enum StorefrontCartPreviewData {
     }
 }
 
+public enum StorefrontCheckoutPreviewData {
+    public static let paymentMethods: [StorefrontPaymentMethod] = [
+        StorefrontPaymentMethod(pluginSlug: "stripe", displayName: "Stripe Sandbox", supportedCurrencies: ["USD"], isLive: false),
+        StorefrontPaymentMethod(pluginSlug: "paypal", displayName: "PayPal Sandbox", supportedCurrencies: ["USD"], isLive: false)
+    ]
+
+    public static func createOrderPreview(cart: StorefrontCartSnapshot) -> StorefrontOrderSummary {
+        StorefrontOrderSummary(
+            id: "preview-order-\(Int(Date().timeIntervalSince1970))",
+            status: "PENDING",
+            paymentStatus: "PENDING",
+            totalAmount: cart.total,
+            currency: "USD",
+            itemCount: cart.itemCount
+        )
+    }
+
+    static func previewShippingAddress() -> ShippingAddressPayload {
+        ShippingAddressPayload(
+            firstName: "Preview",
+            lastName: "User",
+            phone: "13800000000",
+            addressLine1: "1 Foundation Way",
+            city: "Shanghai",
+            state: "Shanghai",
+            postalCode: "200000",
+            country: "CN",
+            email: "preview@jiffoo.local"
+        )
+    }
+}
+
 public enum StorefrontContractClient {
     public static let defaultDevBaseUrl = "http://127.0.0.1:3001"
 
@@ -545,6 +609,64 @@ public enum StorefrontContractClient {
         }
 
         return cart(from: data)
+    }
+
+    public static func fetchPaymentMethods(baseUrl: String) async throws -> [StorefrontPaymentMethod] {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let envelope: PaymentMethodsEnvelope = try await request(path: "/api/payments/available-methods", baseUrl: normalizedBaseUrl)
+
+        guard envelope.success else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/payments/available-methods")
+        }
+
+        return (envelope.data ?? []).map {
+            StorefrontPaymentMethod(
+                pluginSlug: $0.pluginSlug,
+                displayName: $0.displayName,
+                supportedCurrencies: $0.supportedCurrencies,
+                isLive: $0.isLive
+            )
+        }
+    }
+
+    public static func createOrder(
+        baseUrl: String,
+        bearerToken: String,
+        cart: StorefrontCartSnapshot
+    ) async throws -> StorefrontOrderSummary {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let payload = CreateOrderPayload(
+            items: cart.items.map {
+                CreateOrderItemPayload(
+                    productId: $0.productId,
+                    variantId: $0.variantId,
+                    quantity: $0.quantity
+                )
+            },
+            shippingAddress: cart.items.contains(where: { $0.requiresShipping }) ? StorefrontCheckoutPreviewData.previewShippingAddress() : nil,
+            customerEmail: "preview@jiffoo.local"
+        )
+
+        let envelope: OrderEnvelope = try await request(
+            path: "/api/orders",
+            baseUrl: normalizedBaseUrl,
+            method: "POST",
+            bearerToken: bearerToken,
+            body: payload
+        )
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/orders")
+        }
+
+        return StorefrontOrderSummary(
+            id: data.id,
+            status: data.status,
+            paymentStatus: data.paymentStatus,
+            totalAmount: data.totalAmount,
+            currency: data.currency,
+            itemCount: data.items.count
+        )
     }
 
     private static func request<T: Decodable>(
@@ -822,6 +944,60 @@ private struct AddToCartPayload: Encodable {
     let productId: String
     let quantity: Int
     let variantId: String
+}
+
+private struct PaymentMethodsEnvelope: Decodable {
+    let success: Bool
+    let data: [PaymentMethodPayload]?
+}
+
+private struct PaymentMethodPayload: Decodable {
+    let pluginSlug: String
+    let displayName: String
+    let supportedCurrencies: [String]
+    let isLive: Bool
+}
+
+private struct OrderEnvelope: Decodable {
+    let success: Bool
+    let data: OrderPayload?
+}
+
+private struct OrderPayload: Decodable {
+    let id: String
+    let status: String
+    let paymentStatus: String
+    let totalAmount: Double
+    let currency: String
+    let items: [OrderPayloadItem]
+}
+
+private struct OrderPayloadItem: Decodable {
+    let id: String
+}
+
+private struct CreateOrderPayload: Encodable {
+    let items: [CreateOrderItemPayload]
+    let shippingAddress: ShippingAddressPayload?
+    let customerEmail: String?
+}
+
+private struct CreateOrderItemPayload: Encodable {
+    let productId: String
+    let variantId: String
+    let quantity: Int
+}
+
+struct ShippingAddressPayload: Encodable {
+    let firstName: String
+    let lastName: String
+    let phone: String
+    let addressLine1: String
+    let city: String
+    let state: String
+    let postalCode: String
+    let country: String
+    let email: String
 }
 
 private enum StorefrontContractError: LocalizedError {

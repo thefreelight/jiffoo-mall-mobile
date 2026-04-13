@@ -28,6 +28,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added a read-only catalog and product-detail reference slice that can consume `/api/products` and `/api/products/:id` when the local core runtime is available.
 - Added read-only category discovery and search to the public storefront hosts using `/api/products/categories` and public product search filters.
 - Added a minimal cart reference flow that can call `/api/cart`, `/api/cart/items`, and `/api/cart/items/:itemId` when a shop access token is supplied, with preview fallback otherwise.
+- Added a minimal checkout-entry reference flow that can discover `/api/payments/available-methods` and create order drafts from the current cart, with preview fallback when live checkout contracts are unavailable.
 
 ### Changed
 
@@ -41,6 +42,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Clarified that the first public commerce reference flow stays read-only and stops before cart mutation, checkout, or account-specific product behavior.
 - Clarified that category/search support is part of the public reference flow, while cart, checkout, and account behavior still remain for later phases.
 - Clarified that the cart reference flow now exists, but real auth lifecycle, checkout orchestration, and account-specific cart behavior still remain for later phases.
+- Clarified that checkout entry is now demonstrated publicly, while live payment-session orchestration and full product checkout UX still remain for later phases.
 
 ### Removed
 

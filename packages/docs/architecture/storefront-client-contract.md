@@ -107,6 +107,7 @@ Current behavior:
 - the public hosts can render a read-only catalog reference slice from `/api/products` and `/api/products/:id`
 - the public hosts can render category discovery and search from `/api/products/categories` and `/api/products` search filters
 - the public hosts can exercise `/api/cart`, `/api/cart/items`, and `/api/cart/items/:itemId` with an explicit access-token bridge and preview fallback
+- the public hosts can discover `/api/payments/available-methods` and create order drafts from the current cart using the public order contract, again with explicit fallback
 - `quiet-curator` and `stellar-midnight` stay in `planned` status and currently fall back explicitly
 - `limited`, `experimental`, and `unsupported` themes must show a declared fallback instead of failing silently
 - production clients must still resolve store and active theme through `/api/store/context` and `/api/themes/active`

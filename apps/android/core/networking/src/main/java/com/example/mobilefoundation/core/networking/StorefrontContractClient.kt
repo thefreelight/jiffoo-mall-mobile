@@ -78,6 +78,22 @@ data class StorefrontCartSnapshot(
     val status: String,
 )
 
+data class StorefrontPaymentMethod(
+    val pluginSlug: String,
+    val displayName: String,
+    val supportedCurrencies: List<String>,
+    val isLive: Boolean,
+)
+
+data class StorefrontOrderSummary(
+    val id: String,
+    val status: String,
+    val paymentStatus: String,
+    val totalAmount: Double,
+    val currency: String,
+    val itemCount: Int,
+)
+
 object StorefrontCatalogPreviewData {
     val products = listOf(
         StorefrontProductListItem(
@@ -262,6 +278,48 @@ object StorefrontCartPreviewData {
     }
 }
 
+object StorefrontCheckoutPreviewData {
+    val paymentMethods = listOf(
+        StorefrontPaymentMethod(
+            pluginSlug = "stripe",
+            displayName = "Stripe Sandbox",
+            supportedCurrencies = listOf("USD"),
+            isLive = false,
+        ),
+        StorefrontPaymentMethod(
+            pluginSlug = "paypal",
+            displayName = "PayPal Sandbox",
+            supportedCurrencies = listOf("USD"),
+            isLive = false,
+        ),
+    )
+
+    fun createOrderPreview(
+        cart: StorefrontCartSnapshot,
+    ): StorefrontOrderSummary = StorefrontOrderSummary(
+        id = "preview-order-${System.currentTimeMillis()}",
+        status = "PENDING",
+        paymentStatus = "PENDING",
+        totalAmount = cart.total,
+        currency = "USD",
+        itemCount = cart.itemCount,
+    )
+
+    fun previewShippingAddress(): JSONObject = JSONObject(
+        mapOf(
+            "firstName" to "Preview",
+            "lastName" to "User",
+            "phone" to "13800000000",
+            "addressLine1" to "1 Foundation Way",
+            "city" to "Shanghai",
+            "state" to "Shanghai",
+            "country" to "CN",
+            "postalCode" to "200000",
+            "email" to "preview@jiffoo.local",
+        ),
+    )
+}
+
 object StorefrontContractClient {
     const val defaultDevBaseUrl = "http://10.0.2.2:3001"
 
@@ -437,6 +495,66 @@ object StorefrontContractClient {
         return cartFromJson(data)
     }
 
+    fun fetchPaymentMethods(baseUrl: String): List<StorefrontPaymentMethod> {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val envelope = requestEnvelope("$normalizedBaseUrl/api/payments/available-methods")
+        if (!envelope.optBoolean("success")) {
+            throw IOException("Contract probe failed for /api/payments/available-methods")
+        }
+        val data = envelope.optJSONArray("data") ?: JSONArray()
+        return buildList {
+            for (index in 0 until data.length()) {
+                val item = data.optJSONObject(index) ?: continue
+                add(
+                    StorefrontPaymentMethod(
+                        pluginSlug = item.optString("pluginSlug"),
+                        displayName = item.optString("displayName").ifBlank { item.optString("name") },
+                        supportedCurrencies = jsonArrayStrings(item.optJSONArray("supportedCurrencies")),
+                        isLive = item.optBoolean("isLive"),
+                    ),
+                )
+            }
+        }
+    }
+
+    fun createOrder(
+        baseUrl: String,
+        bearerToken: String,
+        cart: StorefrontCartSnapshot,
+    ): StorefrontOrderSummary {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val items = JSONArray().apply {
+            cart.items.forEach { item ->
+                put(
+                    JSONObject(
+                        mapOf(
+                            "productId" to item.productId,
+                            "variantId" to item.variantId,
+                            "quantity" to item.quantity,
+                        ),
+                    ),
+                )
+            }
+        }
+
+        val payload = JSONObject().apply {
+            put("items", items)
+            if (cart.items.any { it.requiresShipping }) {
+                put("shippingAddress", StorefrontCheckoutPreviewData.previewShippingAddress())
+            }
+            put("customerEmail", "preview@jiffoo.local")
+        }
+
+        val envelope = requestEnvelope(
+            urlString = "$normalizedBaseUrl/api/orders",
+            method = "POST",
+            bearerToken = bearerToken,
+            requestBody = payload.toString(),
+        )
+        val data = requireDataObject(envelope, "/api/orders")
+        return orderSummaryFromJson(data)
+    }
+
     private fun requestEnvelope(
         urlString: String,
         method: String = "GET",
@@ -539,4 +657,13 @@ object StorefrontContractClient {
             status = data.optString("status"),
         )
     }
+
+    private fun orderSummaryFromJson(data: JSONObject): StorefrontOrderSummary = StorefrontOrderSummary(
+        id = data.optString("id"),
+        status = data.optString("status"),
+        paymentStatus = data.optString("paymentStatus"),
+        totalAmount = data.optDouble("totalAmount"),
+        currency = data.optString("currency"),
+        itemCount = (data.optJSONArray("items")?.length() ?: 0),
+    )
 }
