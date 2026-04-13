@@ -20,6 +20,7 @@ It exists to provide a reusable Android and iOS foundation that can be consumed 
 - Allow the public hosts to probe documented core storefront contracts during local development without depending on private endpoints.
 - Demonstrate a read-only catalog and product-detail reference flow on top of the documented core commerce contract.
 - Demonstrate read-only category discovery and search on top of the same public commerce contract.
+- Demonstrate minimal cart read/add/remove flows on top of the documented public cart contract, while keeping auth and checkout productization outside the public repo.
 - Define stable capability areas shared across native apps:
   - app shell
   - navigation

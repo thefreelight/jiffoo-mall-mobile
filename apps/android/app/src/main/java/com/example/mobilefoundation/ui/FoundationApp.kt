@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,9 @@ import com.example.mobilefoundation.core.navigation.NavigationRoute
 import com.example.mobilefoundation.core.networking.NetworkingPreview
 import com.example.mobilefoundation.core.networking.RequestDescriptor
 import com.example.mobilefoundation.core.networking.StorefrontCatalogPreviewData
+import com.example.mobilefoundation.core.networking.StorefrontCartPreviewData
+import com.example.mobilefoundation.core.networking.StorefrontCartItem
+import com.example.mobilefoundation.core.networking.StorefrontCartSnapshot
 import com.example.mobilefoundation.core.networking.StorefrontCategory
 import com.example.mobilefoundation.core.networking.StorefrontContractClient
 import com.example.mobilefoundation.core.networking.StorefrontContractSnapshot
@@ -74,6 +78,7 @@ import com.example.mobilefoundation.core.runtime.StorefrontPreviewData
 import com.example.mobilefoundation.core.runtime.ThemeAdapterResolution
 import com.example.mobilefoundation.core.storage.StoragePreview
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -94,6 +99,13 @@ fun FoundationApp() {
     var selectedCategorySlug by remember { mutableStateOf("all") }
     var searchQuery by remember { mutableStateOf("") }
     var appliedSearchQuery by remember { mutableStateOf("") }
+    var cartAccessToken by remember { mutableStateOf("") }
+    var appliedCartAccessToken by remember { mutableStateOf("") }
+    var liveCart by remember { mutableStateOf<StorefrontCartSnapshot?>(null) }
+    var liveCartError by remember { mutableStateOf<String?>(null) }
+    var isLoadingCart by remember { mutableStateOf(false) }
+    var previewCart by remember { mutableStateOf(StorefrontCartPreviewData.emptyCart()) }
+    var isMutatingCart by remember { mutableStateOf(false) }
     var selectedProductId by remember { mutableStateOf(StorefrontCatalogPreviewData.products.first().id) }
     var liveProductDetail by remember { mutableStateOf<StorefrontProductDetail?>(null) }
     var liveProductDetailError by remember { mutableStateOf<String?>(null) }
@@ -213,6 +225,33 @@ fun FoundationApp() {
         isLoadingProductDetail = false
     }
 
+    LaunchedEffect(liveSnapshot?.baseUrl, appliedCartAccessToken) {
+        liveCart = null
+        liveCartError = null
+
+        val snapshot = liveSnapshot ?: return@LaunchedEffect
+        if (appliedCartAccessToken.isBlank()) {
+            liveCartError = "Cart requires a shop access token, so the host is using preview cart data."
+            return@LaunchedEffect
+        }
+
+        isLoadingCart = true
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                StorefrontContractClient.fetchCart(snapshot.baseUrl, appliedCartAccessToken)
+            }
+        }.onSuccess { cart ->
+            liveCart = cart
+        }.onFailure { error ->
+            liveCartError = (error.message ?: "Unable to load cart from core.") + " Using preview cart instead."
+        }
+
+        isLoadingCart = false
+    }
+
+    val scope = rememberCoroutineScope()
+
     FoundationTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Scaffold(
@@ -254,6 +293,74 @@ fun FoundationApp() {
                         liveProductDetail = liveProductDetail,
                         liveProductDetailError = liveProductDetailError,
                         isLoadingProductDetail = isLoadingProductDetail,
+                        cartAccessToken = cartAccessToken,
+                        onCartAccessTokenChange = { cartAccessToken = it },
+                        onApplyCartAccessToken = { appliedCartAccessToken = cartAccessToken.trim() },
+                        onClearCartAccessToken = {
+                            cartAccessToken = ""
+                            appliedCartAccessToken = ""
+                        },
+                        liveCart = liveCart,
+                        liveCartError = liveCartError,
+                        isLoadingCart = isLoadingCart,
+                        previewCart = previewCart,
+                        isMutatingCart = isMutatingCart,
+                        onAddSelectedProductToCart = {
+                            val product = liveProductDetail ?: StorefrontCatalogPreviewData.detailFor(selectedProductId)
+                            if (product == null) return@FoundationHome
+
+                            scope.launch {
+                                isMutatingCart = true
+                                val canUseLiveCart = liveSnapshot != null && appliedCartAccessToken.isNotBlank() && liveCartError == null
+                                if (canUseLiveCart) {
+                                    runCatching {
+                                        withContext(Dispatchers.IO) {
+                                            StorefrontContractClient.addToCart(
+                                                baseUrl = checkNotNull(liveSnapshot).baseUrl,
+                                                bearerToken = appliedCartAccessToken,
+                                                productId = product.id,
+                                                variantId = product.variants.firstOrNull()?.id ?: "${product.id}-default",
+                                            )
+                                        }
+                                    }.onSuccess { cart ->
+                                        liveCart = cart
+                                    }.onFailure { error ->
+                                        liveCart = null
+                                        liveCartError = (error.message ?: "Unable to add to live cart.") + " Using preview cart instead."
+                                        previewCart = StorefrontCartPreviewData.addProduct(previewCart, product)
+                                    }
+                                } else {
+                                    previewCart = StorefrontCartPreviewData.addProduct(previewCart, product)
+                                }
+                                isMutatingCart = false
+                            }
+                        },
+                        onRemoveCartItem = { itemId ->
+                            scope.launch {
+                                isMutatingCart = true
+                                val canUseLiveCart = liveSnapshot != null && appliedCartAccessToken.isNotBlank() && liveCart != null
+                                if (canUseLiveCart) {
+                                    runCatching {
+                                        withContext(Dispatchers.IO) {
+                                            StorefrontContractClient.removeFromCart(
+                                                baseUrl = checkNotNull(liveSnapshot).baseUrl,
+                                                bearerToken = appliedCartAccessToken,
+                                                itemId = itemId,
+                                            )
+                                        }
+                                    }.onSuccess { cart ->
+                                        liveCart = cart
+                                    }.onFailure { error ->
+                                        liveCart = null
+                                        liveCartError = (error.message ?: "Unable to remove from live cart.") + " Using preview cart instead."
+                                        previewCart = StorefrontCartPreviewData.removeItem(previewCart, itemId)
+                                    }
+                                } else {
+                                    previewCart = StorefrontCartPreviewData.removeItem(previewCart, itemId)
+                                }
+                                isMutatingCart = false
+                            }
+                        },
                         previewThemeSlug = previewThemeSlug,
                         onPreviewThemeSelected = { previewThemeSlug = it },
                         previewResolution = previewResolution,
@@ -330,6 +437,17 @@ private fun FoundationHome(
     liveProductDetail: StorefrontProductDetail?,
     liveProductDetailError: String?,
     isLoadingProductDetail: Boolean,
+    cartAccessToken: String,
+    onCartAccessTokenChange: (String) -> Unit,
+    onApplyCartAccessToken: () -> Unit,
+    onClearCartAccessToken: () -> Unit,
+    liveCart: StorefrontCartSnapshot?,
+    liveCartError: String?,
+    isLoadingCart: Boolean,
+    previewCart: StorefrontCartSnapshot,
+    isMutatingCart: Boolean,
+    onAddSelectedProductToCart: () -> Unit,
+    onRemoveCartItem: (String) -> Unit,
     previewThemeSlug: String,
     onPreviewThemeSelected: (String) -> Unit,
     previewResolution: ThemeAdapterResolution,
@@ -388,6 +506,17 @@ private fun FoundationHome(
                 liveProductDetail = liveProductDetail,
                 liveProductDetailError = liveProductDetailError,
                 isLoadingProductDetail = isLoadingProductDetail,
+                cartAccessToken = cartAccessToken,
+                onCartAccessTokenChange = onCartAccessTokenChange,
+                onApplyCartAccessToken = onApplyCartAccessToken,
+                onClearCartAccessToken = onClearCartAccessToken,
+                liveCart = liveCart,
+                liveCartError = liveCartError,
+                isLoadingCart = isLoadingCart,
+                previewCart = previewCart,
+                isMutatingCart = isMutatingCart,
+                onAddSelectedProductToCart = onAddSelectedProductToCart,
+                onRemoveCartItem = onRemoveCartItem,
                 previewThemeSlug = previewThemeSlug,
                 onPreviewThemeSelected = onPreviewThemeSelected,
                 previewResolution = previewResolution,
@@ -442,6 +571,17 @@ private fun StorefrontBasicVersionCard(
     liveProductDetail: StorefrontProductDetail?,
     liveProductDetailError: String?,
     isLoadingProductDetail: Boolean,
+    cartAccessToken: String,
+    onCartAccessTokenChange: (String) -> Unit,
+    onApplyCartAccessToken: () -> Unit,
+    onClearCartAccessToken: () -> Unit,
+    liveCart: StorefrontCartSnapshot?,
+    liveCartError: String?,
+    isLoadingCart: Boolean,
+    previewCart: StorefrontCartSnapshot,
+    isMutatingCart: Boolean,
+    onAddSelectedProductToCart: () -> Unit,
+    onRemoveCartItem: (String) -> Unit,
     previewThemeSlug: String,
     onPreviewThemeSelected: (String) -> Unit,
     previewResolution: ThemeAdapterResolution,
@@ -603,6 +743,22 @@ private fun StorefrontBasicVersionCard(
                 liveProductDetail = liveProductDetail,
                 liveProductDetailError = liveProductDetailError,
                 isLoadingProductDetail = isLoadingProductDetail,
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+            CartReferenceSection(
+                cartAccessToken = cartAccessToken,
+                onCartAccessTokenChange = onCartAccessTokenChange,
+                onApplyCartAccessToken = onApplyCartAccessToken,
+                onClearCartAccessToken = onClearCartAccessToken,
+                liveCart = liveCart,
+                liveCartError = liveCartError,
+                isLoadingCart = isLoadingCart,
+                previewCart = previewCart,
+                isMutatingCart = isMutatingCart,
+                onAddSelectedProductToCart = onAddSelectedProductToCart,
+                onRemoveCartItem = onRemoveCartItem,
             )
         }
     }
@@ -798,6 +954,142 @@ private fun CategoryPillRow(
                 selected = selectedCategorySlug == category.slug,
                 onClick = { onCategorySelected(category.slug) },
             )
+        }
+    }
+}
+
+@Composable
+private fun CartReferenceSection(
+    cartAccessToken: String,
+    onCartAccessTokenChange: (String) -> Unit,
+    onApplyCartAccessToken: () -> Unit,
+    onClearCartAccessToken: () -> Unit,
+    liveCart: StorefrontCartSnapshot?,
+    liveCartError: String?,
+    isLoadingCart: Boolean,
+    previewCart: StorefrontCartSnapshot,
+    isMutatingCart: Boolean,
+    onAddSelectedProductToCart: () -> Unit,
+    onRemoveCartItem: (String) -> Unit,
+) {
+    val effectiveCart = liveCart ?: previewCart
+    val isUsingLiveCart = liveCart != null
+
+    Text(
+        text = "Cart reference",
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+    )
+
+    OutlinedTextField(
+        value = cartAccessToken,
+        onValueChange = onCartAccessTokenChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        label = { Text("Shop access token (optional)") },
+        supportingText = {
+            Text("Core cart endpoints require auth. Leave empty to keep using preview cart data.")
+        },
+    )
+
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = onApplyCartAccessToken) {
+            Text("Connect cart")
+        }
+        Button(onClick = onClearCartAccessToken) {
+            Text("Use preview cart")
+        }
+    }
+
+    if (isLoadingCart) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(
+                text = "Loading /api/cart...",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+            )
+        }
+    }
+
+    if (!isUsingLiveCart && liveCartError != null) {
+        StatusNotice(
+            title = "Preview cart active",
+            message = liveCartError,
+            accent = Color(0xFFF6E6C6),
+        )
+    }
+
+    PillRow(
+        labels = listOf(
+            "cart source: ${if (isUsingLiveCart) "live core" else "preview fallback"}",
+            "items: ${effectiveCart.itemCount}",
+            "subtotal: ${formatPrice(effectiveCart.subtotal)}",
+            "total: ${formatPrice(effectiveCart.total)}",
+        ),
+        dark = false,
+    )
+
+    Button(
+        onClick = onAddSelectedProductToCart,
+        enabled = !isMutatingCart,
+    ) {
+        Text(if (isMutatingCart) "Updating cart..." else "Add selected product")
+    }
+
+    if (effectiveCart.items.isEmpty()) {
+        Text(
+            text = "Cart is empty. Pick a product above, then add it here to exercise the shared cart contract.",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+        )
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            effectiveCart.items.forEach { item ->
+                CartItemCard(
+                    item = item,
+                    onRemove = { onRemoveCartItem(item.id) },
+                    removeEnabled = !isMutatingCart,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CartItemCard(
+    item: StorefrontCartItem,
+    onRemove: () -> Unit,
+    removeEnabled: Boolean,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f)),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = item.productName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            PillRow(
+                labels = listOf(
+                    "qty: ${item.quantity}",
+                    "unit: ${formatPrice(item.price)}",
+                    "subtotal: ${formatPrice(item.subtotal)}",
+                    "shipping: ${if (item.requiresShipping) "required" else "not required"}",
+                ),
+                dark = false,
+            )
+            Button(onClick = onRemove, enabled = removeEnabled) {
+                Text("Remove item")
+            }
         }
     }
 }

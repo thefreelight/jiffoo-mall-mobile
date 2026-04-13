@@ -27,6 +27,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Added live storefront contract probing from the public hosts so Android and iOS can resolve `/api/store/context` and `/api/themes/active` against a local core runtime.
 - Added a read-only catalog and product-detail reference slice that can consume `/api/products` and `/api/products/:id` when the local core runtime is available.
 - Added read-only category discovery and search to the public storefront hosts using `/api/products/categories` and public product search filters.
+- Added a minimal cart reference flow that can call `/api/cart`, `/api/cart/items`, and `/api/cart/items/:itemId` when a shop access token is supplied, with preview fallback otherwise.
 
 ### Changed
 
@@ -39,6 +40,7 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 - Clarified that documented core storefront endpoints can appear in the public networking layer, while tenant-private and product-private endpoints must still stay out.
 - Clarified that the first public commerce reference flow stays read-only and stops before cart mutation, checkout, or account-specific product behavior.
 - Clarified that category/search support is part of the public reference flow, while cart, checkout, and account behavior still remain for later phases.
+- Clarified that the cart reference flow now exists, but real auth lifecycle, checkout orchestration, and account-specific cart behavior still remain for later phases.
 
 ### Removed
 

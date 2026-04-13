@@ -26,6 +26,13 @@ struct RootView: View {
     @State private var selectedCategorySlug = "all"
     @State private var searchQuery = ""
     @State private var appliedSearchQuery = ""
+    @State private var cartAccessToken = ""
+    @State private var appliedCartAccessToken = ""
+    @State private var liveCart: StorefrontCartSnapshot?
+    @State private var liveCartError: String?
+    @State private var isLoadingCart = false
+    @State private var previewCart = StorefrontCartPreviewData.emptyCart()
+    @State private var isMutatingCart = false
     @State private var selectedProductId = StorefrontCatalogPreviewData.products.first?.id ?? ""
     @State private var liveProductDetail: StorefrontProductDetail?
     @State private var liveProductDetailError: String?
@@ -84,6 +91,9 @@ struct RootView: View {
         }
         .task(id: "\(selectedProductId)-\(selectedCategorySlug)-\(appliedSearchQuery)-\(liveProducts.count)-\(liveSnapshot?.baseUrl ?? "preview")") {
             await loadProductDetail()
+        }
+        .task(id: "\(liveSnapshot?.baseUrl ?? "preview")-\(appliedCartAccessToken)") {
+            await loadCart()
         }
     }
 
@@ -189,6 +199,10 @@ struct RootView: View {
             Divider()
 
             catalogReferenceSection()
+
+            Divider()
+
+            cartReferenceSection()
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -282,6 +296,78 @@ struct RootView: View {
             liveProductDetailError = error.localizedDescription
         }
         isLoadingProductDetail = false
+    }
+
+    private func loadCart() async {
+        liveCart = nil
+        liveCartError = nil
+
+        guard let liveSnapshot else { return }
+        guard !appliedCartAccessToken.isEmpty else {
+            liveCartError = "Cart requires a shop access token, so the host is using preview cart data."
+            return
+        }
+
+        isLoadingCart = true
+        do {
+            liveCart = try await StorefrontContractClient.fetchCart(
+                baseUrl: liveSnapshot.baseUrl,
+                bearerToken: appliedCartAccessToken
+            )
+        } catch {
+            liveCartError = error.localizedDescription + " Using preview cart instead."
+        }
+        isLoadingCart = false
+    }
+
+    private func addSelectedProductToCart() async {
+        let product = liveProductDetail ?? StorefrontCatalogPreviewData.detail(for: selectedProductId)
+        guard let product else { return }
+
+        isMutatingCart = true
+        let canUseLiveCart = liveSnapshot != nil && !appliedCartAccessToken.isEmpty && liveCartError == nil
+
+        if canUseLiveCart, let liveSnapshot {
+            do {
+                liveCart = try await StorefrontContractClient.addToCart(
+                    baseUrl: liveSnapshot.baseUrl,
+                    bearerToken: appliedCartAccessToken,
+                    productId: product.id,
+                    variantId: product.variants.first?.id ?? "\(product.id)-default"
+                )
+            } catch {
+                liveCart = nil
+                liveCartError = error.localizedDescription + " Using preview cart instead."
+                previewCart = StorefrontCartPreviewData.addProduct(cart: previewCart, product: product)
+            }
+        } else {
+            previewCart = StorefrontCartPreviewData.addProduct(cart: previewCart, product: product)
+        }
+
+        isMutatingCart = false
+    }
+
+    private func removeCartItem(_ itemId: String) async {
+        isMutatingCart = true
+        let canUseLiveCart = liveSnapshot != nil && !appliedCartAccessToken.isEmpty && liveCart != nil
+
+        if canUseLiveCart, let liveSnapshot {
+            do {
+                liveCart = try await StorefrontContractClient.removeFromCart(
+                    baseUrl: liveSnapshot.baseUrl,
+                    bearerToken: appliedCartAccessToken,
+                    itemId: itemId
+                )
+            } catch {
+                liveCart = nil
+                liveCartError = error.localizedDescription + " Using preview cart instead."
+                previewCart = StorefrontCartPreviewData.removeItem(cart: previewCart, itemId: itemId)
+            }
+        } else {
+            previewCart = StorefrontCartPreviewData.removeItem(cart: previewCart, itemId: itemId)
+        }
+
+        isMutatingCart = false
     }
 
     private func explanationCard() -> some View {
@@ -417,6 +503,78 @@ struct RootView: View {
         }
     }
 
+    private func cartReferenceSection() -> some View {
+        let effectiveCart = liveCart ?? previewCart
+        let isUsingLiveCart = liveCart != nil
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Cart reference")
+                .font(.subheadline.weight(.semibold))
+
+            TextField("Shop access token (optional)", text: $cartAccessToken)
+                .textFieldStyle(.roundedBorder)
+
+            Text("Core cart endpoints require auth. Leave this empty to keep using preview cart data.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Button("Connect cart") {
+                    appliedCartAccessToken = cartAccessToken.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+
+                Button("Use preview cart") {
+                    cartAccessToken = ""
+                    appliedCartAccessToken = ""
+                }
+            }
+
+            if isLoadingCart {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading /api/cart...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !isUsingLiveCart, let liveCartError {
+                statusCard(
+                    title: "Preview cart active",
+                    message: liveCartError,
+                    accent: Color(red: 0.96, green: 0.90, blue: 0.78)
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                pill("cart source: \(isUsingLiveCart ? "live core" : "preview fallback")", dark: false)
+                pill("items: \(effectiveCart.itemCount)", dark: false)
+                pill("subtotal: \(formatPrice(effectiveCart.subtotal))", dark: false)
+                pill("total: \(formatPrice(effectiveCart.total))", dark: false)
+            }
+
+            Button(isMutatingCart ? "Updating cart..." : "Add selected product") {
+                Task {
+                    await addSelectedProductToCart()
+                }
+            }
+            .disabled(isMutatingCart)
+
+            if effectiveCart.items.isEmpty {
+                Text("Cart is empty. Pick a product above, then add it here to exercise the shared cart contract.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(effectiveCart.items, id: \.id) { item in
+                        cartItemCard(item: item)
+                    }
+                }
+            }
+        }
+    }
+
     private func galleryCard(route: NavigationRoute) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
@@ -501,6 +659,29 @@ struct RootView: View {
                 pill("shipping: \(product.requiresShipping ? "required" : "not required")", dark: false)
                 pill("variants: \(product.variants.count)", dark: false)
             }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func cartItemCard(item: StorefrontCartItem) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(item.productName)
+                .font(.body.weight(.semibold))
+            VStack(alignment: .leading, spacing: 8) {
+                pill("qty: \(item.quantity)", dark: false)
+                pill("unit: \(formatPrice(item.price))", dark: false)
+                pill("subtotal: \(formatPrice(item.subtotal))", dark: false)
+                pill("shipping: \(item.requiresShipping ? "required" : "not required")", dark: false)
+            }
+            Button("Remove item") {
+                Task {
+                    await removeCartItem(item.id)
+                }
+            }
+            .disabled(isMutatingCart)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)

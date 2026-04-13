@@ -4,6 +4,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
+import org.json.JSONArray
 import org.json.JSONObject
 
 data class StorefrontContractSnapshot(
@@ -50,6 +51,31 @@ data class StorefrontProductDetail(
     val images: List<String>,
     val requiresShipping: Boolean,
     val variants: List<StorefrontProductVariant>,
+)
+
+data class StorefrontCartItem(
+    val id: String,
+    val productId: String,
+    val productName: String,
+    val price: Double,
+    val quantity: Int,
+    val variantId: String,
+    val variantName: String?,
+    val requiresShipping: Boolean,
+    val subtotal: Double,
+)
+
+data class StorefrontCartSnapshot(
+    val id: String,
+    val userId: String,
+    val items: List<StorefrontCartItem>,
+    val itemCount: Int,
+    val subtotal: Double,
+    val tax: Double,
+    val shipping: Double,
+    val discount: Double,
+    val total: Double,
+    val status: String,
 )
 
 object StorefrontCatalogPreviewData {
@@ -162,6 +188,77 @@ object StorefrontCatalogPreviewData {
 
             categoryMatches && searchMatches
         }
+    }
+}
+
+object StorefrontCartPreviewData {
+    fun emptyCart(): StorefrontCartSnapshot = StorefrontCartSnapshot(
+        id = "preview-cart",
+        userId = "preview-user",
+        items = emptyList(),
+        itemCount = 0,
+        subtotal = 0.0,
+        tax = 0.0,
+        shipping = 0.0,
+        discount = 0.0,
+        total = 0.0,
+        status = "active",
+    )
+
+    fun addProduct(
+        cart: StorefrontCartSnapshot,
+        product: StorefrontProductDetail,
+        quantity: Int = 1,
+    ): StorefrontCartSnapshot {
+        val variant = product.variants.firstOrNull()
+        val variantId = variant?.id ?: "${product.id}-default"
+        val existing = cart.items.firstOrNull { it.productId == product.id && it.variantId == variantId }
+        val updatedItems = if (existing != null) {
+            cart.items.map { item ->
+                if (item.id == existing.id) {
+                    val newQuantity = item.quantity + quantity
+                    item.copy(
+                        quantity = newQuantity,
+                        subtotal = item.price * newQuantity,
+                    )
+                } else {
+                    item
+                }
+            }
+        } else {
+            cart.items + StorefrontCartItem(
+                id = "preview-item-${product.id}-${variantId}",
+                productId = product.id,
+                productName = product.name,
+                price = variant?.salePrice ?: product.price,
+                quantity = quantity,
+                variantId = variantId,
+                variantName = variant?.name,
+                requiresShipping = product.requiresShipping,
+                subtotal = (variant?.salePrice ?: product.price) * quantity,
+            )
+        }
+
+        return recalculate(cart.copy(items = updatedItems))
+    }
+
+    fun removeItem(
+        cart: StorefrontCartSnapshot,
+        itemId: String,
+    ): StorefrontCartSnapshot = recalculate(cart.copy(items = cart.items.filterNot { it.id == itemId }))
+
+    private fun recalculate(cart: StorefrontCartSnapshot): StorefrontCartSnapshot {
+        val subtotal = cart.items.sumOf { it.subtotal }
+        val itemCount = cart.items.sumOf { it.quantity }
+
+        return cart.copy(
+            itemCount = itemCount,
+            subtotal = subtotal,
+            tax = 0.0,
+            shipping = 0.0,
+            discount = 0.0,
+            total = subtotal,
+        )
     }
 }
 
@@ -290,15 +387,83 @@ object StorefrontContractClient {
         )
     }
 
-    private fun requestEnvelope(urlString: String): JSONObject {
+    fun fetchCart(baseUrl: String, bearerToken: String): StorefrontCartSnapshot {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val envelope = requestEnvelope(
+            urlString = "$normalizedBaseUrl/api/cart",
+            bearerToken = bearerToken,
+        )
+        val data = requireDataObject(envelope, "/api/cart")
+        return cartFromJson(data)
+    }
+
+    fun addToCart(
+        baseUrl: String,
+        bearerToken: String,
+        productId: String,
+        variantId: String,
+        quantity: Int = 1,
+    ): StorefrontCartSnapshot {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val payload = JSONObject(
+            mapOf(
+                "productId" to productId,
+                "variantId" to variantId,
+                "quantity" to quantity,
+            ),
+        )
+        val envelope = requestEnvelope(
+            urlString = "$normalizedBaseUrl/api/cart/items",
+            method = "POST",
+            bearerToken = bearerToken,
+            requestBody = payload.toString(),
+        )
+        val data = requireDataObject(envelope, "/api/cart/items")
+        return cartFromJson(data)
+    }
+
+    fun removeFromCart(
+        baseUrl: String,
+        bearerToken: String,
+        itemId: String,
+    ): StorefrontCartSnapshot {
+        val normalizedBaseUrl = baseUrl.trimEnd('/')
+        val envelope = requestEnvelope(
+            urlString = "$normalizedBaseUrl/api/cart/items/$itemId",
+            method = "DELETE",
+            bearerToken = bearerToken,
+        )
+        val data = requireDataObject(envelope, "/api/cart/items/:itemId")
+        return cartFromJson(data)
+    }
+
+    private fun requestEnvelope(
+        urlString: String,
+        method: String = "GET",
+        bearerToken: String? = null,
+        requestBody: String? = null,
+    ): JSONObject {
         val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
+            requestMethod = method
             connectTimeout = 5_000
             readTimeout = 5_000
             setRequestProperty("Accept", "application/json")
+            if (!bearerToken.isNullOrBlank()) {
+                setRequestProperty("Authorization", "Bearer $bearerToken")
+            }
+            if (requestBody != null) {
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+            }
         }
 
         try {
+            if (requestBody != null) {
+                connection.outputStream.use { stream ->
+                    stream.write(requestBody.toByteArray())
+                }
+            }
+
             val statusCode = connection.responseCode
             val body = (if (statusCode in 200..299) connection.inputStream else connection.errorStream)
                 ?.bufferedReader()
@@ -339,4 +504,39 @@ object StorefrontContractClient {
     }
 
     private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
+
+    private fun cartFromJson(data: JSONObject): StorefrontCartSnapshot {
+        val items = buildList {
+            val array = data.optJSONArray("items") ?: JSONArray()
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                add(
+                    StorefrontCartItem(
+                        id = item.optString("id"),
+                        productId = item.optString("productId"),
+                        productName = item.optString("productName"),
+                        price = item.optDouble("price"),
+                        quantity = item.optInt("quantity"),
+                        variantId = item.optString("variantId"),
+                        variantName = item.optString("variantName").takeIf { it.isNotBlank() },
+                        requiresShipping = item.optBoolean("requiresShipping"),
+                        subtotal = item.optDouble("subtotal"),
+                    ),
+                )
+            }
+        }
+
+        return StorefrontCartSnapshot(
+            id = data.optString("id"),
+            userId = data.optString("userId"),
+            items = items,
+            itemCount = data.optInt("itemCount"),
+            subtotal = data.optDouble("subtotal"),
+            tax = data.optDouble("tax"),
+            shipping = data.optDouble("shipping"),
+            discount = data.optDouble("discount"),
+            total = data.optDouble("total"),
+            status = data.optString("status"),
+        )
+    }
 }

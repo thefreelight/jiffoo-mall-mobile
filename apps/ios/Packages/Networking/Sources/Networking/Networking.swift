@@ -122,6 +122,77 @@ public struct StorefrontProductDetail: Sendable, Hashable {
     }
 }
 
+public struct StorefrontCartItem: Sendable, Hashable {
+    public let id: String
+    public let productId: String
+    public let productName: String
+    public let price: Double
+    public let quantity: Int
+    public let variantId: String
+    public let variantName: String?
+    public let requiresShipping: Bool
+    public let subtotal: Double
+
+    public init(
+        id: String,
+        productId: String,
+        productName: String,
+        price: Double,
+        quantity: Int,
+        variantId: String,
+        variantName: String?,
+        requiresShipping: Bool,
+        subtotal: Double
+    ) {
+        self.id = id
+        self.productId = productId
+        self.productName = productName
+        self.price = price
+        self.quantity = quantity
+        self.variantId = variantId
+        self.variantName = variantName
+        self.requiresShipping = requiresShipping
+        self.subtotal = subtotal
+    }
+}
+
+public struct StorefrontCartSnapshot: Sendable, Hashable {
+    public let id: String
+    public let userId: String
+    public let items: [StorefrontCartItem]
+    public let itemCount: Int
+    public let subtotal: Double
+    public let tax: Double
+    public let shipping: Double
+    public let discount: Double
+    public let total: Double
+    public let status: String
+
+    public init(
+        id: String,
+        userId: String,
+        items: [StorefrontCartItem],
+        itemCount: Int,
+        subtotal: Double,
+        tax: Double,
+        shipping: Double,
+        discount: Double,
+        total: Double,
+        status: String
+    ) {
+        self.id = id
+        self.userId = userId
+        self.items = items
+        self.itemCount = itemCount
+        self.subtotal = subtotal
+        self.tax = tax
+        self.shipping = shipping
+        self.discount = discount
+        self.total = total
+        self.status = status
+    }
+}
+
 public enum StorefrontCatalogPreviewData {
     public static let products: [StorefrontProductListItem] = [
         StorefrontProductListItem(
@@ -214,6 +285,112 @@ public enum StorefrontCatalogPreviewData {
 
             return categoryMatches && searchMatches
         }
+    }
+}
+
+public enum StorefrontCartPreviewData {
+    public static func emptyCart() -> StorefrontCartSnapshot {
+        StorefrontCartSnapshot(
+            id: "preview-cart",
+            userId: "preview-user",
+            items: [],
+            itemCount: 0,
+            subtotal: 0,
+            tax: 0,
+            shipping: 0,
+            discount: 0,
+            total: 0,
+            status: "active"
+        )
+    }
+
+    public static func addProduct(
+        cart: StorefrontCartSnapshot,
+        product: StorefrontProductDetail,
+        quantity: Int = 1
+    ) -> StorefrontCartSnapshot {
+        let variant = product.variants.first
+        let variantId = variant?.id ?? "\(product.id)-default"
+        let unitPrice = variant?.salePrice ?? product.price
+
+        let updatedItems: [StorefrontCartItem]
+        if let existing = cart.items.first(where: { $0.productId == product.id && $0.variantId == variantId }) {
+            updatedItems = cart.items.map { item in
+                guard item.id == existing.id else { return item }
+                let newQuantity = item.quantity + quantity
+                return StorefrontCartItem(
+                    id: item.id,
+                    productId: item.productId,
+                    productName: item.productName,
+                    price: item.price,
+                    quantity: newQuantity,
+                    variantId: item.variantId,
+                    variantName: item.variantName,
+                    requiresShipping: item.requiresShipping,
+                    subtotal: item.price * Double(newQuantity)
+                )
+            }
+        } else {
+            updatedItems = cart.items + [
+                StorefrontCartItem(
+                    id: "preview-item-\(product.id)-\(variantId)",
+                    productId: product.id,
+                    productName: product.name,
+                    price: unitPrice,
+                    quantity: quantity,
+                    variantId: variantId,
+                    variantName: variant?.name,
+                    requiresShipping: product.requiresShipping,
+                    subtotal: unitPrice * Double(quantity)
+                )
+            ]
+        }
+
+        return recalculate(cart: StorefrontCartSnapshot(
+            id: cart.id,
+            userId: cart.userId,
+            items: updatedItems,
+            itemCount: cart.itemCount,
+            subtotal: cart.subtotal,
+            tax: cart.tax,
+            shipping: cart.shipping,
+            discount: cart.discount,
+            total: cart.total,
+            status: cart.status
+        ))
+    }
+
+    public static func removeItem(cart: StorefrontCartSnapshot, itemId: String) -> StorefrontCartSnapshot {
+        recalculate(cart: StorefrontCartSnapshot(
+            id: cart.id,
+            userId: cart.userId,
+            items: cart.items.filter { $0.id != itemId },
+            itemCount: cart.itemCount,
+            subtotal: cart.subtotal,
+            tax: cart.tax,
+            shipping: cart.shipping,
+            discount: cart.discount,
+            total: cart.total,
+            status: cart.status
+        ))
+    }
+
+    private static func recalculate(cart: StorefrontCartSnapshot) -> StorefrontCartSnapshot {
+        let subtotal = cart.items.reduce(0) { $0 + $1.subtotal }
+        let itemCount = cart.items.reduce(0) { $0 + $1.quantity }
+
+        return StorefrontCartSnapshot(
+            id: cart.id,
+            userId: cart.userId,
+            items: cart.items,
+            itemCount: itemCount,
+            subtotal: subtotal,
+            tax: 0,
+            shipping: 0,
+            discount: 0,
+            total: subtotal,
+            status: cart.status
+        )
     }
 }
 
@@ -315,16 +492,116 @@ public enum StorefrontContractClient {
         )
     }
 
-    private static func request<T: Decodable>(path: String, baseUrl: String) async throws -> T {
+    public static func fetchCart(baseUrl: String, bearerToken: String) async throws -> StorefrontCartSnapshot {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let envelope: CartEnvelope = try await request(path: "/api/cart", baseUrl: normalizedBaseUrl, bearerToken: bearerToken)
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/cart")
+        }
+
+        return cart(from: data)
+    }
+
+    public static func addToCart(
+        baseUrl: String,
+        bearerToken: String,
+        productId: String,
+        variantId: String,
+        quantity: Int = 1
+    ) async throws -> StorefrontCartSnapshot {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let payload = AddToCartPayload(productId: productId, quantity: quantity, variantId: variantId)
+        let envelope: CartEnvelope = try await request(
+            path: "/api/cart/items",
+            baseUrl: normalizedBaseUrl,
+            method: "POST",
+            bearerToken: bearerToken,
+            body: payload
+        )
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/cart/items")
+        }
+
+        return cart(from: data)
+    }
+
+    public static func removeFromCart(
+        baseUrl: String,
+        bearerToken: String,
+        itemId: String
+    ) async throws -> StorefrontCartSnapshot {
+        let normalizedBaseUrl = normalize(baseUrl)
+        let envelope: CartEnvelope = try await request(
+            path: "/api/cart/items/\(itemId)",
+            baseUrl: normalizedBaseUrl,
+            method: "DELETE",
+            bearerToken: bearerToken
+        )
+
+        guard envelope.success, let data = envelope.data else {
+            throw StorefrontContractError.invalidEnvelope(path: "/api/cart/items/:itemId")
+        }
+
+        return cart(from: data)
+    }
+
+    private static func request<T: Decodable>(
+        path: String,
+        baseUrl: String,
+        method: String = "GET",
+        bearerToken: String? = nil
+    ) async throws -> T {
         let normalizedBaseUrl = normalize(baseUrl)
         guard let url = URL(string: "\(normalizedBaseUrl)\(path)") else {
             throw StorefrontContractError.invalidBaseUrl(baseUrl)
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = method
         request.timeoutInterval = 5
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let bearerToken, !bearerToken.isEmpty {
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await perform(request: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw StorefrontContractError.invalidResponse(path: path)
+        }
+
+        guard 200 ..< 300 ~= httpResponse.statusCode else {
+            let message = String(data: data, encoding: .utf8) ?? "HTTP \(httpResponse.statusCode)"
+            throw StorefrontContractError.httpFailure(path: path, message: message)
+        }
+
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private static func request<T: Decodable, Body: Encodable>(
+        path: String,
+        baseUrl: String,
+        method: String = "GET",
+        bearerToken: String? = nil,
+        body: Body? = nil
+    ) async throws -> T {
+        let normalizedBaseUrl = normalize(baseUrl)
+        guard let url = URL(string: "\(normalizedBaseUrl)\(path)") else {
+            throw StorefrontContractError.invalidBaseUrl(baseUrl)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = 5
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let bearerToken, !bearerToken.isEmpty {
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
+        if let body {
+            request.httpBody = try JSONEncoder().encode(body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
 
         let (data, response) = try await perform(request: request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -387,6 +664,33 @@ public enum StorefrontContractClient {
             task.resume()
         }
     }
+
+    private static func cart(from payload: CartPayload) -> StorefrontCartSnapshot {
+        StorefrontCartSnapshot(
+            id: payload.id,
+            userId: payload.userId,
+            items: payload.items.map {
+                StorefrontCartItem(
+                    id: $0.id,
+                    productId: $0.productId,
+                    productName: $0.productName,
+                    price: $0.price,
+                    quantity: $0.quantity,
+                    variantId: $0.variantId,
+                    variantName: $0.variantName,
+                    requiresShipping: $0.requiresShipping,
+                    subtotal: $0.subtotal
+                )
+            },
+            itemCount: payload.itemCount,
+            subtotal: payload.subtotal,
+            tax: payload.tax,
+            shipping: payload.shipping,
+            discount: payload.discount,
+            total: payload.total,
+            status: payload.status
+        )
+    }
 }
 
 public enum NetworkingPreview {
@@ -398,6 +702,8 @@ public enum NetworkingPreview {
         RequestDescriptor(path: "/api/products?search=watch&page=1&limit=10", method: "GET", requiresAuth: false),
         RequestDescriptor(path: "/api/products/:id", method: "GET", requiresAuth: false),
         RequestDescriptor(path: "/api/cart", method: "GET", requiresAuth: true),
+        RequestDescriptor(path: "/api/cart/items", method: "POST", requiresAuth: true),
+        RequestDescriptor(path: "/api/cart/items/:itemId", method: "DELETE", requiresAuth: true),
         RequestDescriptor(path: "/api/orders", method: "GET", requiresAuth: true)
     ]
 }
@@ -480,6 +786,42 @@ private struct ProductVariantPayload: Decodable {
     let name: String
     let salePrice: Double
     let baseStock: Int
+}
+
+private struct CartEnvelope: Decodable {
+    let success: Bool
+    let data: CartPayload?
+}
+
+private struct CartPayload: Decodable {
+    let id: String
+    let userId: String
+    let items: [CartItemPayload]
+    let itemCount: Int
+    let subtotal: Double
+    let tax: Double
+    let shipping: Double
+    let discount: Double
+    let total: Double
+    let status: String
+}
+
+private struct CartItemPayload: Decodable {
+    let id: String
+    let productId: String
+    let productName: String
+    let price: Double
+    let quantity: Int
+    let variantId: String
+    let variantName: String?
+    let requiresShipping: Bool
+    let subtotal: Double
+}
+
+private struct AddToCartPayload: Encodable {
+    let productId: String
+    let quantity: Int
+    let variantId: String
 }
 
 private enum StorefrontContractError: LocalizedError {

@@ -45,6 +45,7 @@ It should also give new teams one concrete public reference for how a storefront
 - Let maintainers verify the core storefront contract locally from the public hosts before private apps add any product logic.
 - Give new teams one concrete read-only catalog example before they start layering private cart, checkout, or account flows on top.
 - Let new teams verify that category discovery and basic product search can stay inside the shared public contract before any private feature work begins.
+- Let new teams see how authenticated storefront contracts such as cart can still be exercised from the public hosts without hardcoding tenant-private auth or checkout logic.
 
 ## In Scope
 

@@ -16,6 +16,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - Both public hosts can now probe a local core storefront runtime and surface live store/theme resolution before falling back to preview data.
 - Both public hosts now include a read-only catalog and product-detail reference slice backed by live core data when available.
 - Both public hosts now include category discovery and search on top of the same read-only catalog reference path.
+- Both public hosts now include a minimal cart reference flow that can talk to authenticated core cart endpoints when a token is provided and otherwise falls back to preview state.
 
 ## Milestones
 
@@ -96,6 +97,7 @@ Deliverables:
 - local core contract probe for `/api/store/context` and `/api/themes/active`
 - read-only `/api/products` and `/api/products/:id` reference flow
 - read-only `/api/products/categories` and search-filtered `/api/products` reference flow
+- minimal `/api/cart` read plus `/api/cart/items` add/remove reference flow with explicit auth-token bridge
 - explicit fallback UX for `planned`, `limited`, `experimental`, and `unsupported` themes
 - contract-aligned explanation of how `/api/store/context` and `/api/themes/active` feed real runtime resolution
 
@@ -119,6 +121,7 @@ Exit criteria:
 - [x] Add live core contract probing to the public storefront reference hosts
 - [x] Add a read-only catalog and product-detail reference slice
 - [x] Add category discovery and search to the read-only storefront reference flow
+- [x] Add a minimal cart reference flow with auth-token bridge and preview fallback
 
 ## Risks And Watchouts
 
@@ -153,3 +156,4 @@ The Linear rollout should track at least these workstreams:
 - `JIF-131`: Wire live core storefront contract probe into public hosts
 - `JIF-132`: Add read-only catalog reference flow to public hosts
 - `JIF-133`: Add category discovery and search to public hosts
+- `JIF-139`: Add cart reference flow to public hosts
