@@ -11,7 +11,7 @@ Turn the repository into a stable, documented, public native foundation that can
 - iOS has a generated Xcode host project and package-level smoke coverage.
 - Android now has a pinned runnable host build with a minimal public Compose demo surface.
 - Android `core/*` capabilities now exist as real Gradle library modules, and iOS gallery screens read from package-level contracts instead of host-only placeholder data.
-- The first planned baseline release is now documented as `v0.0.1`, and release-readiness checks pass locally.
+- The first planned baseline release is now documented as `v0.0.1`, release-readiness checks pass locally, and the `v0.0.1` tag is now the baseline handoff point for downstream apps.
 - Both public hosts now expose a preview-only storefront basic version that proves `builtin-default` adapter selection and explicit fallback for not-yet-supported themes.
 - Both public hosts can now probe a local core storefront runtime and surface live store/theme resolution before falling back to preview data.
 - Both public hosts now include a read-only catalog and product-detail reference slice backed by live core data when available.
@@ -115,7 +115,7 @@ Exit criteria:
 - [x] Add Android and iOS demo gallery surfaces
 - [x] Add downstream integration guide
 - [x] Prepare the first foundation baseline release
-- [ ] Tag the first foundation baseline release
+- [x] Tag the first foundation baseline release
 - [x] Define stability tiers for public modules
 - [x] Add compatibility lab checks for downstream consumers
 - [x] Define Android artifact and iOS package distribution plan

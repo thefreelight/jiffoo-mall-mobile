@@ -6,6 +6,8 @@ The format is inspired by Keep a Changelog and follows a lightweight, human-read
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-04-23
+
 ### Added
 
 - Re-founded the repository as a public native mobile foundation instead of a React Native / Expo app.
